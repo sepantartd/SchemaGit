@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+
+  postgres:
+    image: postgres:16
+    container_name: schemagit_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: schemagit
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  mysql:
+    image: mysql:8
+    container_name: schemagit_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: schemagit
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysqldata:/var/lib/mysql
+
+  schemagit:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: schemagit_cli
+    depends_on:
+      - postgres
+      - mysql
+    volumes:
+      - ../:/app
+    working_dir: /app
+    entrypoint: ["/entrypoint.sh"]
+
+volumes:
+  pgdata:
+  mysqldata:
