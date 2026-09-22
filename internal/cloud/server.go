@@ -18,6 +18,9 @@ func StartAPIServer() {
     http.HandleFunc("/api/diff", withAuth(handleDiff))
     http.HandleFunc("/api/apply", withAuth(handleApply))
 
+    // Webhook endpoint
+    http.HandleFunc("/api/webhook/github", withAuth(HandleGitHubWebhook))
+
     log.Info("Cloud API running on :9090")
     http.ListenAndServe(":9090", nil)
 }
