@@ -10,6 +10,7 @@ import (
     "github.com/sepanta/schemagit/internal/log"
     "github.com/sepanta/schemagit/internal/migration"
     "github.com/sepanta/schemagit/internal/schema"
+    "github.com/sepanta/schemagit/internal/store"
 )
 
 func RunDiff() error {
@@ -19,20 +20,36 @@ func RunDiff() error {
         return fmt.Errorf("not inside a git repository")
     }
 
-    log.Info("Loading current DB schema...")
+    log.Info("Opening database...")
     database, err := db.Open(cfg.DBPath)
     if err != nil {
         return err
     }
+
+    log.Info("Loading current DB schema...")
     currentSchema, err := schema.LoadCurrentSchemaFromDB(database)
     if err != nil {
         return err
     }
 
-    log.Info("Loading desired schema from file...")
-    desiredSchema, err := schema.LoadDesiredSchemaFromFile(cfg.SchemaPath)
+    log.Info("Determining desired schema...")
+    commit, err := git.GetCommitHash()
     if err != nil {
         return err
+    }
+
+    st, err := store.Open(".schemagit.db")
+    if err != nil {
+        return err
+    }
+
+    desiredSchema, err := st.LoadSchema(commit)
+    if err != nil {
+        log.Info("No stored schema for this commit, falling back to schema.sql")
+        desiredSchema, err = schema.LoadDesiredSchemaFromFile(cfg.SchemaPath)
+        if err != nil {
+            return err
+        }
     }
 
     log.Info("Computing diff...")
@@ -68,10 +85,24 @@ func RunApply() error {
         return err
     }
 
-    log.Info("Loading desired schema...")
-    desiredSchema, err := schema.LoadDesiredSchemaFromFile(cfg.SchemaPath)
+    log.Info("Determining desired schema...")
+    commit, err := git.GetCommitHash()
     if err != nil {
         return err
+    }
+
+    st, err := store.Open(".schemagit.db")
+    if err != nil {
+        return err
+    }
+
+    desiredSchema, err := st.LoadSchema(commit)
+    if err != nil {
+        log.Info("No stored schema for this commit, using schema.sql")
+        desiredSchema, err = schema.LoadDesiredSchemaFromFile(cfg.SchemaPath)
+        if err != nil {
+            return err
+        }
     }
 
     log.Info("Computing diff...")
@@ -87,11 +118,15 @@ func RunApply() error {
     }
 
     log.Info("Applying changes...")
-    err = migration.ApplySQL(database, stmts)
-    if err != nil {
+    if err := migration.ApplySQL(database, stmts); err != nil {
         return err
     }
 
-    log.Info("Database synced successfully.")
+    log.Info("Saving desired schema for this commit...")
+    if err := st.SaveSchema(commit, desiredSchema); err != nil {
+        return err
+    }
+
+    log.Info("Database synced successfully for commit: " + commit)
     return nil
 }
