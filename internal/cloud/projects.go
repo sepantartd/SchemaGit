@@ -15,3 +15,11 @@ func GetProjectByID(id int64) *store.Project {
 func UpdateProject(p *store.Project) error {
     return projStore.UpdateProject(*p)
 }
+
+func DeleteProject(id int64) error {
+    // حذف پروژه
+    _ = projStore.DeleteProject(id)
+    // حذف لاگ‌های مربوط به پروژه
+    _ = logsStore.DeleteLogsByProject(id)
+    return nil
+}
