@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Project Webhooks</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; }
+        th { background: #f5f5f5; }
+        .btn { padding: 6px 12px; background: #007bff; color: white; border-radius: 4px; text-decoration: none; }
+        .btn-danger { background: #dc3545; }
+        input, select { padding: 6px; margin-bottom: 10px; width: 260px; }
+        label { display: block; margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<h1>Webhooks: {{ .Project.Name }}</h1>
+
+<a href="/project?id={{ .Project.ID }}" class="btn">← Back to Project</a>
+
+<h2>Add Webhook</h2>
+
+<form method="POST" action="/project/webhooks/add?id={{ .Project.ID }}">
+    <label>URL</label>
+    <input type="url" name="url" required>
+
+    <label>Secret</label>
+    <input type="text" name="secret" required>
+
+    <label>Type</label>
+    <select name="type">
+        <option value="github">GitHub</option>
+        <option value="gitlab">GitLab</option>
+        <option value="bitbucket">Bitbucket</option>
+        <option value="custom">Custom</option>
+    </select>
+
+    <br>
+    <button class="btn" type="submit">Add Webhook</button>
+</form>
+
+<h2>Current Webhooks</h2>
+
+<table>
+    <tr>
+        <th>Type</th>
+        <th>URL</th>
+        <th>Secret</th>
+        <th>Created At</th>
+        <th>Actions</th>
+    </tr>
+    {{ if .Webhooks }}
+        {{ range .Webhooks }}
+            <tr>
+                <td>{{ .Type }}</td>
+                <td>{{ .URL }}</td>
+                <td>{{ .Secret }}</td>
+                <td>{{ .CreatedAt }}</td>
+                <td>
+                    <a href="/project/webhooks/delete?webhook_id={{ .ID }}&project_id={{ .ProjectID }}" class="btn btn-danger">Remove</a>
+                </td>
+            </tr>
+        {{ end }}
+    {{ else }}
+        <tr>
+            <td colspan="5">No webhooks yet.</td>
+        </tr>
+    {{ end }}
+</table>
+
+</body>
+</html>
