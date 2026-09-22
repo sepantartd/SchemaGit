@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ .Title }}</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .log-item { margin-bottom: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+        .success { color: green; }
+        .failed { color: red; }
+        code { background: #eee; padding: 4px 6px; border-radius: 4px; }
+        .section { margin-top: 30px; }
+        .btn { padding: 8px 14px; background: #007bff; color: white; border-radius: 4px; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+    <h1>Project: {{ .Project.Name }}</h1>
+
+    <a href="/" class="btn">← Back to Dashboard</a>
+
+    <div class="section">
+        <h2>Database Configuration</h2>
+
+        <p><b>DB Type:</b> {{ .Project.DBType }}</p>
+
+        {{ if eq .Project.DBType "sqlite" }}
+            <p><b>SQLite Path:</b> {{ .Project.SQLitePath }}</p>
+        {{ end }}
+
+        {{ if eq .Project.DBType "postgres" }}
+            <p><b>Host:</b> {{ .Project.PGHost }}</p>
+            <p><b>Port:</b> {{ .Project.PGPort }}</p>
+            <p><b>User:</b> {{ .Project.PGUser }}</p>
+            <p><b>DB:</b> {{ .Project.PGName }}</p>
+        {{ end }}
+
+        {{ if eq .Project.DBType "mysql" }}
+            <p><b>Host:</b> {{ .Project.MYHost }}</p>
+            <p><b>Port:</b> {{ .Project.MYPort }}</p>
+            <p><b>User:</b> {{ .Project.MYUser }}</p>
+            <p><b>DB:</b> {{ .Project.MYName }}</p>
+        {{ end }}
+    </div>
+
+    <div class="section">
+        <h2>Actions</h2>
+
+        <p>
+            <a class="btn" href="/api/projects/{{ .Project.ID }}/diff">Run Diff</a>
+            <a class="btn" href="/api/projects/{{ .Project.ID }}/apply">Run Apply</a>
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>Logs</h2>
+
+        {{ if .Logs }}
+            {{ range .Logs }}
+                <div class="log-item">
+                    <b>Type:</b> {{ .Type }} <br>
+                    <b>Status:</b>
+                    {{ if .Success }}
+                        <span class="success">✔ success</span>
+                    {{ else }}
+                        <span class="failed">✘ failed</span>
+                    {{ end }}
+                    <br>
+                    <b>Time:</b> {{ .Timestamp }} <br>
+
+                    {{ if .Error }}
+                        <b>Error:</b> <span class="failed">{{ .Error }}</span>
+                    {{ end }}
+                </div>
+            {{ end }}
+        {{ else }}
+            <p>No logs for this project.</p>
+        {{ end }}
+    </div>
+
+</body>
+              </html>
