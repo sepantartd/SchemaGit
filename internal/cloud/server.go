@@ -5,6 +5,7 @@ import (
     "errors"
     "net/http"
     "strconv"
+    "strings"
     "time"
 
     "github.com/sepanta/schemagit/internal/cli"
@@ -87,9 +88,26 @@ func StartAPIServer() {
     InitLogs(".cloud_logs.db")
     InitProjects(".cloud_projects.db")
 
-    http.HandleFunc("/api/diff", withAuth(withProject(handleDiff)))
-    http.HandleFunc("/api/apply", withAuth(withProject(handleApply)))
-    http.HandleFunc("/api/webhook/github", withAuth(withProject(HandleGitHubWebhook)))
+    http.HandleFunc("/api/projects/", func(w http.ResponseWriter, r *http.Request) {
+        path := r.URL.Path
+
+        if strings.HasSuffix(path, "/diff") {
+            withAuth(withProjectFromURL(handleDiff))(w, r)
+            return
+        }
+
+        if strings.HasSuffix(path, "/apply") {
+            withAuth(withProjectFromURL(handleApply))(w, r)
+            return
+        }
+
+        if strings.HasSuffix(path, "/webhook/github") {
+            withAuth(withProjectFromURL(HandleGitHubWebhook))(w, r)
+            return
+        }
+
+        respond(w, errors.New("unknown project endpoint"))
+    })
 
     go StartDashboardServer(cfg.CloudAPIKey)
 
@@ -120,19 +138,18 @@ func withAuth(next http.HandlerFunc) http.HandlerFunc {
 }
 
 //
-// Project Extractor
+// Project extractor
 //
 
-func withProject(next func(http.ResponseWriter, *http.Request, int64)) http.HandlerFunc {
+func withProjectFromURL(next func(http.ResponseWriter, *http.Request, int64)) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
-
-        pidStr := r.Header.Get("X-Project-ID")
-        if pidStr == "" {
-            respond(w, errors.New("missing X-Project-ID"))
+        parts := strings.Split(r.URL.Path, "/")
+        if len(parts) < 4 {
+            respond(w, errors.New("invalid project path"))
             return
         }
 
-        pid, err := strconv.ParseInt(pidStr, 10, 64)
+        pid, err := strconv.ParseInt(parts[3], 10, 64)
         if err != nil {
             respond(w, errors.New("invalid project id"))
             return
@@ -147,18 +164,42 @@ func withProject(next func(http.ResponseWriter, *http.Request, int64)) http.Hand
 //
 
 func handleDiff(w http.ResponseWriter, r *http.Request, projectID int64) {
+    project := GetProjectByID(projectID)
+    if project == nil {
+        respond(w, errors.New("project not found"))
+        return
+    }
+
+    config.SetDBForProject(project)
+
     err := cli.RunDiff()
     AddLog("diff", err == nil, errString(err), projectID)
     respond(w, err)
 }
 
 func handleApply(w http.ResponseWriter, r *http.Request, projectID int64) {
+    project := GetProjectByID(projectID)
+    if project == nil {
+        respond(w, errors.New("project not found"))
+        return
+    }
+
+    config.SetDBForProject(project)
+
     err := cli.RunApply()
     AddLog("apply", err == nil, errString(err), projectID)
     respond(w, err)
 }
 
 func HandleGitHubWebhook(w http.ResponseWriter, r *http.Request, projectID int64) {
+    project := GetProjectByID(projectID)
+    if project == nil {
+        respond(w, errors.New("project not found"))
+        return
+    }
+
+    config.SetDBForProject(project)
+
     err1 := cli.RunDiff()
     err2 := cli.RunApply()
 
