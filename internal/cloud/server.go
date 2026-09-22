@@ -5,6 +5,7 @@ import (
     "net/http"
 
     "github.com/sepanta/schemagit/internal/cli"
+    "github.com/sepanta/schemagit/internal/config"
     "github.com/sepanta/schemagit/internal/log"
 )
 
@@ -14,11 +15,29 @@ type Response struct {
 }
 
 func StartAPIServer() {
-    http.HandleFunc("/api/diff", handleDiff)
-    http.HandleFunc("/api/apply", handleApply)
+    http.HandleFunc("/api/diff", withAuth(handleDiff))
+    http.HandleFunc("/api/apply", withAuth(handleApply))
 
     log.Info("Cloud API running on :9090")
     http.ListenAndServe(":9090", nil)
+}
+
+func withAuth(next http.HandlerFunc) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        cfg := config.Default()
+        key := r.Header.Get("X-API-Key")
+
+        if key == "" || key != cfg.CloudAPIKey {
+            w.WriteHeader(http.StatusUnauthorized)
+            json.NewEncoder(w).Encode(Response{
+                Ok:    false,
+                Error: "unauthorized",
+            })
+            return
+        }
+
+        next(w, r)
+    }
 }
 
 func handleDiff(w http.ResponseWriter, r *http.Request) {
