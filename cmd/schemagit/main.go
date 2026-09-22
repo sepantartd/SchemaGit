@@ -7,20 +7,23 @@ import (
     "github.com/sepanta/schemagit/internal/cli"
     "github.com/sepanta/schemagit/internal/log"
     "github.com/sepanta/schemagit/internal/ui"
+    "github.com/sepanta/schemagit/internal/cloud"
 )
 
 func printHelp() {
-    fmt.Println("SchemaGit v0.3")
+    fmt.Println("SchemaGit v0.4")
     fmt.Println("")
     fmt.Println("Usage:")
     fmt.Println("  schemagit diff        Show differences between DB and desired schema")
     fmt.Println("  schemagit apply       Apply schema changes to database")
     fmt.Println("  schemagit ui          Start Web Dashboard")
+    fmt.Println("  schemagit cloud       Start Cloud API Server")
     fmt.Println("")
     fmt.Println("Examples:")
     fmt.Println("  schemagit diff")
     fmt.Println("  schemagit apply")
     fmt.Println("  schemagit ui")
+    fmt.Println("  schemagit cloud")
 }
 
 func main() {
@@ -45,6 +48,9 @@ func main() {
 
     case "ui":
         ui.StartServer()
+
+    case "cloud":
+        cloud.StartAPIServer()
 
     case "help":
         printHelp()
