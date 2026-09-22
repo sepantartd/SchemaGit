@@ -20,6 +20,7 @@ func DeleteProject(id int64) error {
     _ = projStore.DeleteProject(id)
     _ = logsStore.DeleteLogsByProject(id)
     _ = projStore.DeleteMembersByProject(id)
+    _ = projStore.DeleteWebhooksByProject(id)
     return nil
 }
 
@@ -38,4 +39,22 @@ func AddMemberToProject(id int64, email, role string) error {
 
 func DeleteMember(memberID int64) error {
     return projStore.DeleteMember(memberID)
+}
+
+func GetWebhooksByProject(id int64) []store.ProjectWebhook {
+    return projStore.LoadWebhooksByProject(id)
+}
+
+func AddWebhookToProject(id int64, url, secret, wtype string) error {
+    w := store.ProjectWebhook{
+        ProjectID: id,
+        URL:       url,
+        Secret:    secret,
+        Type:      wtype,
+    }
+    return projStore.AddWebhook(w)
+}
+
+func DeleteWebhook(id int64) error {
+    return projStore.DeleteWebhook(id)
 }
