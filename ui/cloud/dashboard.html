@@ -2,20 +2,41 @@
 <html>
 <head>
     <title>{{ .Title }}</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .log-item { margin-bottom: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+        .success { color: green; }
+        .failed { color: red; }
+        code { background: #eee; padding: 4px 6px; border-radius: 4px; }
+    </style>
 </head>
 <body>
+
     <h1>{{ .Title }}</h1>
 
     <h2>API Key</h2>
     <code>{{ .APIKey }}</code>
 
     <h2>Recent Logs</h2>
+
     {{ if .Logs }}
-        <ul>
         {{ range .Logs }}
-            <li>{{ . }}</li>
+            <div class="log-item">
+                <b>Type:</b> {{ .Type }} <br>
+                <b>Status:</b>
+                {{ if .Success }}
+                    <span class="success">✔ success</span>
+                {{ else }}
+                    <span class="failed">✘ failed</span>
+                {{ end }}
+                <br>
+                <b>Time:</b> {{ .Timestamp }} <br>
+
+                {{ if .Error }}
+                    <b>Error:</b> <span class="failed">{{ .Error }}</span>
+                {{ end }}
+            </div>
         {{ end }}
-        </ul>
     {{ else }}
         <p>No logs yet.</p>
     {{ end }}
@@ -26,5 +47,6 @@
         <li>POST /api/apply</li>
         <li>POST /api/webhook/github</li>
     </ul>
+
 </body>
 </html>
