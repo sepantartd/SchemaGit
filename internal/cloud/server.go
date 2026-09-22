@@ -7,6 +7,7 @@ import (
     "github.com/sepanta/schemagit/internal/cli"
     "github.com/sepanta/schemagit/internal/config"
     "github.com/sepanta/schemagit/internal/log"
+    "github.com/sepanta/schemagit/internal/store"
 )
 
 type Response struct {
@@ -14,23 +15,88 @@ type Response struct {
     Error string `json:"error,omitempty"`
 }
 
+var logsStore *store.Store
+var projStore *store.Store
+
+//
+// Init
+//
+
+func InitLogs(path string) {
+    st, err := store.Open(path)
+    if err != nil {
+        log.Error("cannot open logs store: " + err.Error())
+        return
+    }
+    logsStore = st
+}
+
+func InitProjects(path string) {
+    st, err := store.Open(path)
+    if err != nil {
+        log.Error("cannot open projects store: " + err.Error())
+        return
+    }
+    projStore = st
+}
+
+//
+// Helpers
+//
+
+func AddLog(t string, success bool, errMsg string, projectID int64) {
+    if logsStore == nil {
+        return
+    }
+
+    entry := store.CloudLog{
+        Type:      t,
+        Success:   success,
+        Error:     errMsg,
+        Timestamp: time.Now().Unix(),
+        ProjectID: projectID,
+    }
+
+    logsStore.SaveCloudLog(entry)
+}
+
+func GetLogs() []store.CloudLog {
+    if logsStore == nil {
+        return []store.CloudLog{}
+    }
+    return logsStore.LoadCloudLogs()
+}
+
+func GetProjects() []store.Project {
+    if projStore == nil {
+        return []store.Project{}
+    }
+    return projStore.LoadProjects()
+}
+
+//
+// API Server
+//
+
 func StartAPIServer() {
     cfg := config.Default()
 
-    // init logs DB
     InitLogs(".cloud_logs.db")
+    InitProjects(".cloud_projects.db")
 
-    // API endpoints
     http.HandleFunc("/api/diff", withAuth(handleDiff))
     http.HandleFunc("/api/apply", withAuth(handleApply))
     http.HandleFunc("/api/webhook/github", withAuth(HandleGitHubWebhook))
 
-    // dashboard
     go StartDashboardServer(cfg.CloudAPIKey)
 
     log.Info("Cloud API running on :9090")
     http.ListenAndServe(":9090", nil)
 }
+
+//
+// Auth
+//
 
 func withAuth(next http.HandlerFunc) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
@@ -50,15 +116,19 @@ func withAuth(next http.HandlerFunc) http.HandlerFunc {
     }
 }
 
+//
+// Handlers
+//
+
 func handleDiff(w http.ResponseWriter, r *http.Request) {
     err := cli.RunDiff()
-    AddLog("diff", err == nil, errString(err))
+    AddLog("diff", err == nil, errString(err), 0)
     respond(w, err)
 }
 
 func handleApply(w http.ResponseWriter, r *http.Request) {
     err := cli.RunApply()
-    AddLog("apply", err == nil, errString(err))
+    AddLog("apply", err == nil, errString(err), 0)
     respond(w, err)
 }
 
@@ -69,10 +139,14 @@ func HandleGitHubWebhook(w http.ResponseWriter, r *http.Request) {
     success := err1 == nil && err2 == nil
     errMsg := errString(err1) + " | " + errString(err2)
 
-    AddLog("webhook", success, errMsg)
+    AddLog("webhook", success, errMsg, 0)
 
     respond(w, nil)
 }
+
+//
+// Response helper
+//
 
 func respond(w http.ResponseWriter, err error) {
     resp := Response{Ok: err == nil}
