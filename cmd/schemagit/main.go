@@ -4,6 +4,7 @@ import (
     "fmt"
     "os"
 
+    "github.com/sepanta/schemagit/internal/cli"
     "github.com/sepanta/schemagit/internal/log"
 )
 
@@ -20,9 +21,13 @@ func main() {
 
     switch cmd {
     case "diff":
-        log.Info("Diff command will be implemented in next phase")
+        if err := cli.RunDiff(); err != nil {
+            log.Error(err.Error())
+        }
     case "apply":
-        log.Info("Apply command will be implemented in next phase")
+        if err := cli.RunApply(); err != nil {
+            log.Error(err.Error())
+        }
     default:
         log.Error("Unknown command: " + cmd)
     }
