@@ -19,7 +19,7 @@ func Open(path string) (*Store, error) {
 
     s := &Store{db: db}
 
-    // Logs table
+    // Logs
     _, _ = s.db.Exec(`
         CREATE TABLE IF NOT EXISTS cloud_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,7 +27,7 @@ func Open(path string) (*Store, error) {
         );
     `)
 
-    // Projects table
+    // Projects
     _, _ = s.db.Exec(`
         CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,8 +84,24 @@ func (s *Store) LoadLogsByProject(pid int64) []CloudLog {
 //
 
 type Project struct {
-    ID   int64  `json:"id"`
-    Name string `json:"name"`
+    ID     int64  `json:"id"`
+    Name   string `json:"name"`
+
+    DBType string `json:"db_type"`
+
+    SQLitePath string `json:"sqlite_path"`
+
+    PGHost string `json:"pg_host"`
+    PGPort int    `json:"pg_port"`
+    PGUser string `json:"pg_user"`
+    PGPass string `json:"pg_pass"`
+    PGName string `json:"pg_name"`
+
+    MYHost string `json:"my_host"`
+    MYPort int    `json:"my_port"`
+    MYUser string `json:"my_user"`
+    MYPass string `json:"my_pass"`
+    MYName string `json:"my_name"`
 }
 
 func (s *Store) SaveProject(p Project) error {
