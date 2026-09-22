@@ -2,7 +2,10 @@ package cloud
 
 import (
     "encoding/json"
+    "errors"
     "net/http"
+    "strconv"
+    "time"
 
     "github.com/sepanta/schemagit/internal/cli"
     "github.com/sepanta/schemagit/internal/config"
@@ -60,11 +63,11 @@ func AddLog(t string, success bool, errMsg string, projectID int64) {
     logsStore.SaveCloudLog(entry)
 }
 
-func GetLogs() []store.CloudLog {
+func GetLogsByProject(pid int64) []store.CloudLog {
     if logsStore == nil {
         return []store.CloudLog{}
     }
-    return logsStore.LoadCloudLogs()
+    return logsStore.LoadLogsByProject(pid)
 }
 
 func GetProjects() []store.Project {
@@ -84,9 +87,9 @@ func StartAPIServer() {
     InitLogs(".cloud_logs.db")
     InitProjects(".cloud_projects.db")
 
-    http.HandleFunc("/api/diff", withAuth(handleDiff))
-    http.HandleFunc("/api/apply", withAuth(handleApply))
-    http.HandleFunc("/api/webhook/github", withAuth(HandleGitHubWebhook))
+    http.HandleFunc("/api/diff", withAuth(withProject(handleDiff)))
+    http.HandleFunc("/api/apply", withAuth(withProject(handleApply)))
+    http.HandleFunc("/api/webhook/github", withAuth(withProject(HandleGitHubWebhook)))
 
     go StartDashboardServer(cfg.CloudAPIKey)
 
@@ -117,29 +120,52 @@ func withAuth(next http.HandlerFunc) http.HandlerFunc {
 }
 
 //
+// Project Extractor
+//
+
+func withProject(next func(http.ResponseWriter, *http.Request, int64)) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+
+        pidStr := r.Header.Get("X-Project-ID")
+        if pidStr == "" {
+            respond(w, errors.New("missing X-Project-ID"))
+            return
+        }
+
+        pid, err := strconv.ParseInt(pidStr, 10, 64)
+        if err != nil {
+            respond(w, errors.New("invalid project id"))
+            return
+        }
+
+        next(w, r, pid)
+    }
+}
+
+//
 // Handlers
 //
 
-func handleDiff(w http.ResponseWriter, r *http.Request) {
+func handleDiff(w http.ResponseWriter, r *http.Request, projectID int64) {
     err := cli.RunDiff()
-    AddLog("diff", err == nil, errString(err), 0)
+    AddLog("diff", err == nil, errString(err), projectID)
     respond(w, err)
 }
 
-func handleApply(w http.ResponseWriter, r *http.Request) {
+func handleApply(w http.ResponseWriter, r *http.Request, projectID int64) {
     err := cli.RunApply()
-    AddLog("apply", err == nil, errString(err), 0)
+    AddLog("apply", err == nil, errString(err), projectID)
     respond(w, err)
 }
 
-func HandleGitHubWebhook(w http.ResponseWriter, r *http.Request) {
+func HandleGitHubWebhook(w http.ResponseWriter, r *http.Request, projectID int64) {
     err1 := cli.RunDiff()
     err2 := cli.RunApply()
 
     success := err1 == nil && err2 == nil
     errMsg := errString(err1) + " | " + errString(err2)
 
-    AddLog("webhook", success, errMsg, 0)
+    AddLog("webhook", success, errMsg, projectID)
 
     respond(w, nil)
 }
