@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SchemaGit Apply</title>
+</head>
+<body>
+    <h1>Apply Result</h1>
+
+    {{ if .Error }}
+        <p style="color:red;">Error: {{ .Error }}</p>
+    {{ else }}
+        <p>Apply executed successfully.</p>
+    {{ end }}
+
+    <a href="/">Back</a>
+</body>
+</html>
