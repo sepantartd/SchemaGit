@@ -19,7 +19,7 @@ func Open(path string) (*Store, error) {
 
     s := &Store{db: db}
 
-    // init tables
+    // Logs table
     _, _ = s.db.Exec(`
         CREATE TABLE IF NOT EXISTS cloud_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,6 +27,7 @@ func Open(path string) (*Store, error) {
         );
     `)
 
+    // Projects table
     _, _ = s.db.Exec(`
         CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,8 +57,8 @@ func (s *Store) SaveCloudLog(l CloudLog) error {
     return err
 }
 
-func (s *Store) LoadCloudLogs() []CloudLog {
-    rows, err := s.db.Query(`SELECT data FROM cloud_logs ORDER BY id DESC LIMIT 100`)
+func (s *Store) LoadLogsByProject(pid int64) []CloudLog {
+    rows, err := s.db.Query(`SELECT data FROM cloud_logs ORDER BY id DESC LIMIT 200`)
     if err != nil {
         return []CloudLog{}
     }
@@ -70,7 +71,9 @@ func (s *Store) LoadCloudLogs() []CloudLog {
         var obj CloudLog
         json.Unmarshal([]byte(raw), &obj)
 
-        out = append(out, obj)
+        if obj.ProjectID == pid {
+            out = append(out, obj)
+        }
     }
 
     return out
