@@ -38,6 +38,21 @@ services:
     working_dir: /app
     entrypoint: ["/entrypoint.sh"]
 
+  schemagit_ui:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: schemagit_ui
+    depends_on:
+      - postgres
+      - mysql
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../:/app
+    working_dir: /app
+    entrypoint: ["schemagit", "ui"]
+
 volumes:
   pgdata:
   mysqldata:
