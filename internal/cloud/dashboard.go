@@ -10,17 +10,19 @@ import (
 type DashboardData struct {
     Title   string
     APIKey  string
-    Logs    []string
+    Logs    []CloudLog
 }
 
 var dashboardTpl = template.Must(template.ParseFiles("ui/cloud/dashboard.html"))
 
 func StartDashboardServer(apiKey string) {
     http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+        logs := GetLogs()
+
         data := DashboardData{
             Title:  "SchemaGit Cloud Dashboard",
             APIKey: apiKey,
-            Logs:   []string{}, // بعداً لاگ‌ها رو از استور می‌کشیم
+            Logs:   logs,
         }
 
         dashboardTpl.Execute(w, data)
