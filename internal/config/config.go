@@ -20,8 +20,12 @@ type Config struct {
     MYPass string
     MYName string
 
+    // Schema + Store
     SchemaPath string
     StorePath  string
+
+    // Cloud Auth
+    CloudAPIKey string
 }
 
 func Default() *Config {
@@ -34,15 +38,17 @@ func Default() *Config {
         PGPort: 5432,
         PGUser: "postgres",
         PGPass: "postgres",
-        PGName: "postgres",
+        PGName: "schemagit",
 
         MYHost: "localhost",
         MYPort: 3306,
         MYUser: "root",
         MYPass: "",
-        MYName: "test",
+        MYName: "schemagit",
 
         SchemaPath: "schema.sql",
         StorePath:  ".schemagit.db",
+
+        CloudAPIKey: "dev-key-123",
     }
 }
