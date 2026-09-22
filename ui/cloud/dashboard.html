@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ .Title }}</title>
+</head>
+<body>
+    <h1>{{ .Title }}</h1>
+
+    <h2>API Key</h2>
+    <code>{{ .APIKey }}</code>
+
+    <h2>Recent Logs</h2>
+    {{ if .Logs }}
+        <ul>
+        {{ range .Logs }}
+            <li>{{ . }}</li>
+        {{ end }}
+        </ul>
+    {{ else }}
+        <p>No logs yet.</p>
+    {{ end }}
+
+    <h2>Endpoints</h2>
+    <ul>
+        <li>POST /api/diff</li>
+        <li>POST /api/apply</li>
+        <li>POST /api/webhook/github</li>
+    </ul>
+</body>
+</html>
