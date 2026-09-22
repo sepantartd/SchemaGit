@@ -11,3 +11,7 @@ func GetProjectByID(id int64) *store.Project {
     }
     return nil
 }
+
+func UpdateProject(p *store.Project) error {
+    return projStore.UpdateProject(*p)
+}
