@@ -8,6 +8,8 @@
         .success { color: green; }
         .failed { color: red; }
         code { background: #eee; padding: 4px 6px; border-radius: 4px; }
+        .project-box { padding: 10px; border: 1px solid #ccc; margin-bottom: 10px; border-radius: 6px; }
+        .section { margin-top: 30px; }
     </style>
 </head>
 <body>
@@ -17,36 +19,88 @@
     <h2>API Key</h2>
     <code>{{ .APIKey }}</code>
 
-    <h2>Recent Logs</h2>
+    <div class="section">
+        <h2>Projects</h2>
 
-    {{ if .Logs }}
-        {{ range .Logs }}
-            <div class="log-item">
-                <b>Type:</b> {{ .Type }} <br>
-                <b>Status:</b>
-                {{ if .Success }}
-                    <span class="success">✔ success</span>
-                {{ else }}
-                    <span class="failed">✘ failed</span>
+        {{ if .Projects }}
+            <ul>
+            {{ range .Projects }}
+                <li>
+                    <a href="/?project={{ .ID }}">{{ .Name }}</a>
+                </li>
+            {{ end }}
+            </ul>
+        {{ else }}
+            <p>No projects yet.</p>
+        {{ end }}
+    </div>
+
+    <div class="section">
+        <h2>Selected Project</h2>
+
+        {{ if .CurrentProject }}
+            <div class="project-box">
+                <p><b>ID:</b> {{ .CurrentProject.ID }}</p>
+                <p><b>Name:</b> {{ .CurrentProject.Name }}</p>
+                <p><b>DB Type:</b> {{ .CurrentProject.DBType }}</p>
+
+                {{ if eq .CurrentProject.DBType "sqlite" }}
+                    <p><b>SQLite Path:</b> {{ .CurrentProject.SQLitePath }}</p>
                 {{ end }}
-                <br>
-                <b>Time:</b> {{ .Timestamp }} <br>
 
-                {{ if .Error }}
-                    <b>Error:</b> <span class="failed">{{ .Error }}</span>
+                {{ if eq .CurrentProject.DBType "postgres" }}
+                    <p><b>Host:</b> {{ .CurrentProject.PGHost }}</p>
+                    <p><b>Port:</b> {{ .CurrentProject.PGPort }}</p>
+                    <p><b>User:</b> {{ .CurrentProject.PGUser }}</p>
+                    <p><b>DB:</b> {{ .CurrentProject.PGName }}</p>
+                {{ end }}
+
+                {{ if eq .CurrentProject.DBType "mysql" }}
+                    <p><b>Host:</b> {{ .CurrentProject.MYHost }}</p>
+                    <p><b>Port:</b> {{ .CurrentProject.MYPort }}</p>
+                    <p><b>User:</b> {{ .CurrentProject.MYUser }}</p>
+                    <p><b>DB:</b> {{ .CurrentProject.MYName }}</p>
                 {{ end }}
             </div>
+        {{ else }}
+            <p>No project selected.</p>
         {{ end }}
-    {{ else }}
-        <p>No logs yet.</p>
-    {{ end }}
+    </div>
 
-    <h2>Endpoints</h2>
-    <ul>
-        <li>POST /api/diff</li>
-        <li>POST /api/apply</li>
-        <li>POST /api/webhook/github</li>
-    </ul>
+    <div class="section">
+        <h2>Logs for Project {{ .CurrentProject.ID }}</h2>
+
+        {{ if .Logs }}
+            {{ range .Logs }}
+                <div class="log-item">
+                    <b>Type:</b> {{ .Type }} <br>
+                    <b>Status:</b>
+                    {{ if .Success }}
+                        <span class="success">✔ success</span>
+                    {{ else }}
+                        <span class="failed">✘ failed</span>
+                    {{ end }}
+                    <br>
+                    <b>Time:</b> {{ .Timestamp }} <br>
+
+                    {{ if .Error }}
+                        <b>Error:</b> <span class="failed">{{ .Error }}</span>
+                    {{ end }}
+                </div>
+            {{ end }}
+        {{ else }}
+            <p>No logs for this project.</p>
+        {{ end }}
+    </div>
+
+    <div class="section">
+        <h2>Endpoints</h2>
+        <ul>
+            <li>POST /api/projects/{id}/diff</li>
+            <li>POST /api/projects/{id}/apply</li>
+            <li>POST /api/projects/{id}/webhook/github</li>
+        </ul>
+    </div>
 
 </body>
 </html>
