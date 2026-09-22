@@ -15,11 +15,17 @@ type Response struct {
 }
 
 func StartAPIServer() {
+    cfg := config.Default()
+
+    // API endpoints (با Auth)
     http.HandleFunc("/api/diff", withAuth(handleDiff))
     http.HandleFunc("/api/apply", withAuth(handleApply))
 
-    // Webhook endpoint
+    // Webhook GitHub (با Auth)
     http.HandleFunc("/api/webhook/github", withAuth(HandleGitHubWebhook))
+
+    // داشبورد Cloud روی پورت جدا
+    go StartDashboardServer(cfg.CloudAPIKey)
 
     log.Info("Cloud API running on :9090")
     http.ListenAndServe(":9090", nil)
