@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SchemaGit Diff</title>
+</head>
+<body>
+    <h1>Diff Result</h1>
+
+    {{ if .Error }}
+        <p style="color:red;">Error: {{ .Error }}</p>
+    {{ else }}
+        <p>Diff executed. Check CLI output.</p>
+    {{ end }}
+
+    <a href="/">Back</a>
+</body>
+</html>
