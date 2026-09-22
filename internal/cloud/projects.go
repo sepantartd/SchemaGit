@@ -17,9 +17,25 @@ func UpdateProject(p *store.Project) error {
 }
 
 func DeleteProject(id int64) error {
-    // حذف پروژه
     _ = projStore.DeleteProject(id)
-    // حذف لاگ‌های مربوط به پروژه
     _ = logsStore.DeleteLogsByProject(id)
+    _ = projStore.DeleteMembersByProject(id)
     return nil
+}
+
+func GetMembersByProject(id int64) []store.ProjectMember {
+    return projStore.LoadMembersByProject(id)
+}
+
+func AddMemberToProject(id int64, email, role string) error {
+    m := store.ProjectMember{
+        ProjectID: id,
+        Email:     email,
+        Role:      role,
+    }
+    return projStore.AddProjectMember(m)
+}
+
+func DeleteMember(memberID int64) error {
+    return projStore.DeleteMember(memberID)
 }
