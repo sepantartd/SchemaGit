@@ -6,16 +6,18 @@ import (
 
     "github.com/sepanta/schemagit/internal/cloud"
     "github.com/sepanta/schemagit/internal/log"
-    "github.com/sepanta/schemagit/internal/schema"
     "github.com/sepanta/schemagit/internal/migrate"
+    "github.com/sepanta/schemagit/internal/schema"
 )
 
 type Agent struct {
-    APIKey string
+    APIKey  string
+    WorkDir string
+    Token   string
 }
 
-func NewAgent(apiKey string) *Agent {
-    return &Agent{APIKey: apiKey}
+func NewAgent(apiKey, workDir, token string) *Agent {
+    return &Agent{APIKey: apiKey, WorkDir: workDir, Token: token}
 }
 
 func (a *Agent) Start() {
@@ -28,8 +30,6 @@ func (a *Agent) Start() {
             continue
         }
 
-        log.Info("Running job: " + job.Type)
-
         cloud.MarkJobRunning(a.APIKey, job.ID)
 
         err := a.runJob(job)
@@ -41,153 +41,100 @@ func (a *Agent) Start() {
     }
 }
 
-func (a *Agent) runJob(job *cloud.Job) error {
+func (a *Agent) runJob(job *store.Job) error {
     switch job.Type {
 
     case "github_push":
-        return a.handleGitHubPush(job)
+        return a.handlePush(job)
 
-    case "manual_apply":
-        return a.handleManualApply(job)
+    case "github_pr_diff":
+        return a.handlePRDiff(job)
+
+    case "github_pr_apply":
+        return a.handlePRApply(job)
 
     default:
         return fmt.Errorf("unknown job type: %s", job.Type)
     }
 }
 
-func (a *Agent) handleGitHubPush(job *cloud.Job) error {
+func (a *Agent) handlePush(job *store.Job) error {
     repo := job.Payload["repo"]
     branch := job.Payload["branch"]
     projectID := job.PayloadInt("project_id")
 
-    // Clone/Pull Repo
-    err := cloud.CloneOrPullRepo(repo, branch)
+    err := cloud.GitCloneOrPull(repo, branch, a.Token, a.WorkDir)
     if err != nil {
         return err
     }
 
-    desired, err := schema.LoadDesiredSchemaFromFile("schema.sql")
-    if err != nil {
-        return err
-    }
-
-    current, err := schema.LoadCurrentSchema(projectID)
-    if err != nil {
-        return err
-    }
-
-    diff := schema.Diff(current, desired)
-    if diff.IsEmpty() {
-        return nil
-    }
-
-    mig, err := migrate.Generate(diff)
-    if err != nil {
-        return err
-    }
-
-    return migrate.Apply(projectID, mig)
-}
-
-func (a *Agent) handleManualApply(job *cloud.Job) error {
-    projectID := job.PayloadInt("project_id")
-    schemaPath := job.Payload["schema_path"]
-
-    desired, err := schema.LoadDesiredSchemaFromFile(schemaPath)
-    if err != nil {
-        return err
-    }
-
-    current, err := schema.LoadCurrentSchema(projectID)
-    if err != nil {
-        return err
-    }
-
-    diff := schema.Diff(current, desired)
-    if diff.IsEmpty() {
-        return nil
-    }
-
-    mig, err := migrate.Generate(diff)
-    if err != nil {
-        return err
-    }
-
-    return migrate.Apply(projectID, mig)
-}        log.Info("Processing job: " + job.Type)
-
-        err := a.processJob(job)
-        if err != nil {
-            cloud.ReportJobFailure(a.APIKey, job.ID, err.Error())
-        } else {
-            cloud.ReportJobSuccess(a.APIKey, job.ID)
-        }
-    }
-}
-
-func (a *Agent) processJob(job *cloud.Job) error {
-    switch job.Type {
-
-    case "github_push":
-        return a.handleGitHubPush(job)
-
-    case "manual_apply":
-        return a.handleManualApply(job)
-
-    default:
-        return fmt.Errorf("unknown job type: %s", job.Type)
-    }
-}
-
-func (a *Agent) handleGitHubPush(job *cloud.Job) error {
-    repo := job.Payload["repo"]
-    branch := job.Payload["branch"]
-    projectID := int64(job.PayloadInt("project_id"))
-
-    // Clone or pull
-    err := a.cloneOrPullRepo(repo, branch)
-    if err != nil {
-        return err
-    }
-
-    // Load desired schema
     desired, err := schema.LoadDesiredSchemaFromFile(a.WorkDir + "/schema.sql")
     if err != nil {
         return err
     }
 
-    // Load current schema
     current, err := schema.LoadCurrentSchema(projectID)
     if err != nil {
         return err
     }
 
-    // Diff
     diff := schema.Diff(current, desired)
     if diff.IsEmpty() {
-        log.Info("No changes detected")
         return nil
     }
 
-    // Generate migration
     mig, err := migrate.Generate(diff)
     if err != nil {
         return err
     }
 
-    // Apply migration
-    err = migrate.Apply(projectID, mig)
+    return migrate.Apply(projectID, mig)
+}
+
+func (a *Agent) handlePRDiff(job *store.Job) error {
+    repo := job.Payload["repo"]
+    branch := job.Payload["branch"]
+    projectID := job.PayloadInt("project_id")
+
+    err := cloud.GitCloneOrPull(repo, branch, a.Token, a.WorkDir)
     if err != nil {
         return err
     }
 
+    desired, err := schema.LoadDesiredSchemaFromFile(a.WorkDir + "/schema.sql")
+    if err != nil {
+        return err
+    }
+
+    current, err := schema.LoadCurrentSchema(projectID)
+    if err != nil {
+        return err
+    }
+
+    diff := schema.Diff(current, desired)
+
+    cloud.SaveCloudLog(store.CloudLog{
+        Type:      "pr_diff",
+        Success:   true,
+        Error:     "",
+        Timestamp: time.Now().Unix(),
+        ProjectID: projectID,
+    })
+
     return nil
 }
 
-func (a *Agent) handleManualApply(job *cloud.Job) error {
-    projectID := int64(job.PayloadInt("project_id"))
+func (a *Agent) handlePRApply(job *store.Job) error {
+    repo := job.Payload["repo"]
+    branch := job.Payload["branch"]
+    projectID := job.PayloadInt("project_id")
 
-    desired, err := schema.LoadDesiredSchemaFromFile(job.Payload["schema_path"])
+    err := cloud.GitCloneOrPull(repo, branch, a.Token, a.WorkDir)
+    if err != nil {
+        return err
+    }
+
+    desired, err := schema.LoadDesiredSchemaFromFile(a.WorkDir + "/schema.sql")
     if err != nil {
         return err
     }
@@ -208,14 +155,4 @@ func (a *Agent) handleManualApply(job *cloud.Job) error {
     }
 
     return migrate.Apply(projectID, mig)
-}
-
-func (a *Agent) cloneOrPullRepo(repo, branch string) error {
-    if _, err := os.Stat(a.WorkDir); os.IsNotExist(err) {
-        cmd := exec.Command("git", "clone", "-b", branch, repo, a.WorkDir)
-        return cmd.Run()
-    }
-
-    cmd := exec.Command("git", "-C", a.WorkDir, "pull")
-    return cmd.Run()
 }
