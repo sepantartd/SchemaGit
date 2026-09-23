@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Billing</title>
+</head>
+<body>
+
+<h1>Billing</h1>
+
+<div id="current"></div>
+
+<button onclick="setPlan('free')">Switch to Free</button>
+<button onclick="setPlan('pro')">Switch to Pro</button>
+
+<script>
+function load() {
+    fetch("/api/billing/get", {
+        headers: { "Authorization": localStorage.getItem("token") }
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById("current").innerHTML =
+            "<h2>Current Plan: " + data.plan + "</h2>" +
+            "<p>Max Projects: " + data.maxProjects + "</p>" +
+            "<p>Max Migrations: " + data.maxMigrations + "</p>";
+    });
+}
+
+function setPlan(plan) {
+    fetch("/api/billing/set", {
+        method: "POST",
+        headers: { "Authorization": localStorage.getItem("token") },
+        body: JSON.stringify({ plan })
+    })
+    .then(() => load());
+}
+
+load();
+</script>
+
+</body>
+</html>

@@ -24,10 +24,6 @@ type Response struct {
 var logsStore *store.Store
 var projStore *store.Store
 
-//
-// Init
-//
-
 func InitLogs(path string) {
     st, err := store.Open(path)
     if err != nil {
@@ -45,10 +41,6 @@ func InitProjects(path string) {
     }
     projStore = st
 }
-
-//
-// Helpers
-//
 
 func AddLog(t string, success bool, errMsg string, projectID int64) {
     if logsStore == nil {
@@ -80,10 +72,6 @@ func GetProjects() []store.Project {
     return projStore.LoadProjects()
 }
 
-//
-// API Server
-//
-
 func StartAPIServer() {
     cfg := config.Default()
 
@@ -92,6 +80,8 @@ func StartAPIServer() {
 
     http.HandleFunc("/api/auth/signup", api.SignupHandler)
     http.HandleFunc("/api/auth/login", api.LoginHandler)
+    http.HandleFunc("/api/billing/get", api.BillingGetHandler)
+    http.HandleFunc("/api/billing/set", api.BillingSetHandler)
     http.HandleFunc("/api/pipeline/plan", api.PipelinePlanHandler)
     http.HandleFunc("/api/project/overview", api.ProjectOverviewHandler)
     http.HandleFunc("/project", func(w http.ResponseWriter, r *http.Request) {
@@ -99,6 +89,9 @@ func StartAPIServer() {
     })
     http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
         http.ServeFile(w, r, "ui/cloud/login.html")
+    })
+    http.HandleFunc("/billing", func(w http.ResponseWriter, r *http.Request) {
+        http.ServeFile(w, r, "ui/cloud/billing.html")
     })
 
     http.HandleFunc("/api/projects/", func(w http.ResponseWriter, r *http.Request) {
@@ -131,10 +124,6 @@ func StartAPIServer() {
     http.ListenAndServe(":9090", nil)
 }
 
-//
-// Auth
-//
-
 func withAuth(next http.HandlerFunc) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         cfg := config.Default()
@@ -153,10 +142,6 @@ func withAuth(next http.HandlerFunc) http.HandlerFunc {
     }
 }
 
-//
-// Project extractor
-//
-
 func withProjectFromURL(next func(http.ResponseWriter, *http.Request, int64)) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         parts := strings.Split(r.URL.Path, "/")
@@ -174,10 +159,6 @@ func withProjectFromURL(next func(http.ResponseWriter, *http.Request, int64)) ht
         next(w, r, pid)
     }
 }
-
-//
-// Handlers
-//
 
 func handleDiff(w http.ResponseWriter, r *http.Request, projectID int64) {
     project := GetProjectByID(projectID)
@@ -226,10 +207,6 @@ func HandleGitHubWebhook(w http.ResponseWriter, r *http.Request, projectID int64
 
     respond(w, nil)
 }
-
-//
-// Response helper
-//
 
 func respond(w http.ResponseWriter, err error) {
     resp := Response{Ok: err == nil}

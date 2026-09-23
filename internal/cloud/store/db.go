@@ -51,6 +51,11 @@ func initTables() error {
             token TEXT PRIMARY KEY,
             email TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS billing (
+            email TEXT PRIMARY KEY,
+            plan TEXT
+        );
     `)
 
     return err
