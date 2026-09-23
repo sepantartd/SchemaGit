@@ -1,0 +1,5 @@
+cloud_url: "https://your-cloud-domain.com"
+api_key: "YOUR_API_KEY"
+project_id: 1
+interval_seconds: 60
+log_level: "info"
