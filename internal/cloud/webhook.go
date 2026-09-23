@@ -11,30 +11,46 @@ import (
     "time"
 
     "github.com/sepanta/schemagit/internal/log"
-    "github.com/sepanta/schemagit/internal/store"
 )
 
-//
-// Webhook Payload Structs
-//
+func StartWebhookServer(apiKey string) {
+    http.HandleFunc("/webhook/github", func(w http.ResponseWriter, r *http.Request) {
 
-type GitHubPushPayload struct {
-    Ref        string `json:"ref"`
-    After      string `json:"after"`
-    Repository struct {
-        CloneURL string `json:"clone_url"`
-        FullName string `json:"full_name"`
-    } `json:"repository"`
-}
+        rawBody, _ := io.ReadAll(r.Body)
+        signature := r.Header.Get("X-Hub-Signature")
 
-//
-// Utility: Validate GitHub Signature
-//
+        webhookID := r.URL.Query().Get("id")
+        projectID := findProjectByWebhook(webhookID)
 
-func validateGitHubSignature(secret string, body []byte, signature string) bool {
-    if !strings.HasPrefix(signature, "sha1=") {
-        return false
-    }
+        project := GetProjectByID(projectID)
+
+        if !validateGitHubSignature(project.GitHubSecret, rawBody, signature) {
+            http.Error(w, "invalid signature", 401)
+            return
+        }
+
+        var payload struct {
+            Ref        string `json:"ref"`
+            Repository struct {
+                CloneURL string `json:"clone_url"`
+            } `json:"repository"`
+        }
+
+        json.Unmarshal(rawBody, &payload)
+
+        branch := strings.TrimPrefix(payload.Ref, "refs/heads/")
+
+        CreateJob(apiKey, "github_push", map[string]string{
+            "repo":       payload.Repository.CloneURL,
+            "branch":     branch,
+            "project_id": fmtInt(projectID),
+        })
+
+        w.Write([]byte(`{"ok":true}`))
+    })
+
+    http.ListenAndServe(":8090", nil)
+}    }
 
     mac := hmac.New(sha1.New, []byte(secret))
     mac.Write(body)
