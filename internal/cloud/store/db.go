@@ -26,7 +26,6 @@ func initTables() error {
             plan_json TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
-
         CREATE TABLE IF NOT EXISTS jobs (
             id TEXT PRIMARY KEY,
             project_id TEXT,
@@ -34,29 +33,35 @@ func initTables() error {
             result TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
-
         CREATE TABLE IF NOT EXISTS logs (
             id TEXT PRIMARY KEY,
             job_id TEXT,
             log TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
-
         CREATE TABLE IF NOT EXISTS users (
             email TEXT PRIMARY KEY,
             password TEXT
         );
-
         CREATE TABLE IF NOT EXISTS sessions (
             token TEXT PRIMARY KEY,
             email TEXT
         );
-
         CREATE TABLE IF NOT EXISTS billing (
             email TEXT PRIMARY KEY,
-            plan TEXT
+            plan TEXT NOT NULL DEFAULT 'free'
+        );
+        CREATE TABLE IF NOT EXISTS projects (
+            id TEXT PRIMARY KEY,
+            owner TEXT NOT NULL,
+            name TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS migrations (
+            id TEXT PRIMARY KEY,
+            owner TEXT NOT NULL,
+            project TEXT NOT NULL,
+            created_at TEXT NOT NULL
         );
     `)
-
     return err
 }

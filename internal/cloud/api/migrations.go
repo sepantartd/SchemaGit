@@ -4,17 +4,18 @@ import (
     "encoding/json"
     "net/http"
 
+    "schemagit/internal/cloud/runner"
+    "schemagit/internal/cloud/store"
     "schemagit/internal/schema/diff"
     "schemagit/internal/schema/generator"
-    "schemagit/internal/schema/validator"
     "schemagit/internal/schema/planner"
-    "schemagit/internal/cloud/runner"
+    "schemagit/internal/schema/validator"
 )
 
 type RunMigrationRequest struct {
-    OldSchema []diff.Table       `json:"old_schema"`
-    NewSchema []diff.Table       `json:"new_schema"`
-    Diff      *diff.SchemaDiff   `json:"diff"`
+    OldSchema []diff.Table     `json:"old_schema"`
+    NewSchema []diff.Table     `json:"new_schema"`
+    Diff      *diff.SchemaDiff `json:"diff"`
 }
 
 type RunMigrationResponse struct {
@@ -25,11 +26,23 @@ type RunMigrationResponse struct {
 
 func RunMigrationHandler(r *runner.Runner) http.HandlerFunc {
     return func(w http.ResponseWriter, req *http.Request) {
+        token := req.Header.Get("Authorization")
+        email, err := store.ValidateToken(token)
+        if err != nil {
+            http.Error(w, "invalid token", http.StatusUnauthorized)
+            return
+        }
+        if !store.CanCreateMigration(email) {
+            http.Error(w, "migration limit reached for your plan", http.StatusForbidden)
+            return
+        }
 
         var body RunMigrationRequest
-        json.NewDecoder(req.Body).Decode(&body)
+        if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+            http.Error(w, "invalid request", http.StatusBadRequest)
+            return
+        }
 
-        // مرحله ۱: Diff
         var d diff.SchemaDiff
         if body.Diff != nil {
             d = *body.Diff
@@ -37,7 +50,6 @@ func RunMigrationHandler(r *runner.Runner) http.HandlerFunc {
             d = diff.Diff(body.OldSchema, body.NewSchema)
         }
 
-        // مرحله ۲: Validate
         validation := validator.Validate(d)
         for _, issue := range validation.Issues {
             if issue.Severity == "error" {
@@ -46,27 +58,22 @@ func RunMigrationHandler(r *runner.Runner) http.HandlerFunc {
             }
         }
 
-        // مرحله ۳: Generate Migration
         mig := generator.Generate(d)
-
-        // مرحله ۴: Build Plan
         plan := planner.BuildPlan(d, mig)
-
-        // مرحله ۵: Run Migration
-        job, err := r.RunMigration("project-id", extractStatements(plan))
+        projectID := "project-id"
+        job, err := r.RunMigration(projectID, extractStatements(plan))
         if err != nil {
             http.Error(w, err.Error(), http.StatusInternalServerError)
             return
         }
-
-        // مرحله ۶: پاسخ
-        resp := RunMigrationResponse{
-            JobID:  job.ID,
-            Status: string(job.Status),
-            Result: job.Result,
+        if err := store.RecordMigration(email, projectID); err != nil {
+            http.Error(w, err.Error(), http.StatusInternalServerError)
+            return
         }
 
-        json.NewEncoder(w).Encode(resp)
+        json.NewEncoder(w).Encode(RunMigrationResponse{
+            JobID: job.ID, Status: string(job.Status), Result: job.Result,
+        })
     }
 }
 

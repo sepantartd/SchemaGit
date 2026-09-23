@@ -3,55 +3,32 @@
 <head>
     <title>SchemaGit Project Overview</title>
     <link rel="stylesheet" href="/static/style.css">
-    <style>
-        .box { border:1px solid #ddd; padding:10px; margin-bottom:10px; }
-        .title { font-weight:bold; margin-bottom:6px; }
-    </style>
+    <style>.box { border:1px solid #ddd; padding:10px; margin-bottom:10px; }.title { font-weight:bold; margin-bottom:6px; }</style>
 </head>
 <body>
-
 <h1>Project Overview</h1>
-
-<div id="prs"></div>
-<div id="jobs"></div>
-
+<div>
+    <h2>Create Project</h2>
+    <input id="newProject" placeholder="Project name">
+    <button onclick="createProject()">Create</button>
+    <div id="projectError" style="color:red;"></div>
+</div>
+<div id="prs"></div><div id="jobs"></div>
 <script>
 const params = new URLSearchParams(window.location.search);
 const project = params.get("project");
-
-fetch(`/api/project/overview?project=${project}`)
-    .then(r => r.json())
-    .then(data => {
-
-        // PR List
-        let prsHtml = "<div class='box'><div class='title'>Pull Requests</div>";
-        data.prs.forEach(pr => {
-            prsHtml += `
-                <div>
-                    <a href="/pipeline/pr?repo=${pr.repo}&pr=${pr.number}">
-                        PR #${pr.number} — ${pr.repo}
-                    </a>
-                    <span style="margin-left:10px;">${pr.status}</span>
-                </div>
-            `;
-        });
-        prsHtml += "</div>";
-        document.getElementById("prs").innerHTML = prsHtml;
-
-        // Jobs List
-        let jobsHtml = "<div class='box'><div class='title'>Recent Jobs</div>";
-        data.jobs.forEach(job => {
-            jobsHtml += `
-                <div>
-                    <strong>${job.id}</strong> — ${job.status}
-                    <pre>${job.result}</pre>
-                </div>
-            `;
-        });
-        jobsHtml += "</div>";
-        document.getElementById("jobs").innerHTML = jobsHtml;
-    });
+function createProject() {
+    fetch("/api/project/create", { method:"POST", headers:{"Authorization":localStorage.getItem("token")}, body:JSON.stringify({name:document.getElementById("newProject").value}) })
+    .then(r => { if (!r.ok) return r.text().then(t => { document.getElementById("projectError").innerText=t; }); window.location.reload(); });
+}
+fetch(`/api/project/overview?project=${project}`).then(r=>r.json()).then(data=>{
+    let prsHtml="<div class='box'><div class='title'>Pull Requests</div>";
+    (data.prs||[]).forEach(pr=>{prsHtml+=`<div><a href="/pipeline/pr?repo=${pr.repo}&pr=${pr.number}">PR #${pr.number} — ${pr.repo}</a><span style="margin-left:10px;">${pr.status}</span></div>`;});
+    document.getElementById("prs").innerHTML=prsHtml+"</div>";
+    let jobsHtml="<div class='box'><div class='title'>Recent Jobs</div>";
+    (data.jobs||[]).forEach(job=>{jobsHtml+=`<div><strong>${job.id}</strong> — ${job.status}<pre>${job.result}</pre></div>`;});
+    document.getElementById("jobs").innerHTML=jobsHtml+"</div>";
+});
 </script>
-
 </body>
 </html>
