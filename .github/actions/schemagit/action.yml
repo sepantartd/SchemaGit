@@ -1,0 +1,52 @@
+name: "SchemaGit Migration Check"
+description: "Run SchemaGit diff, plan and send results to Cloud API"
+
+inputs:
+  cloud_api:
+    description: "SchemaGit Cloud API URL"
+    required: true
+  project_id:
+    description: "Project ID in SchemaGit Cloud"
+    required: true
+  old_schema:
+    description: "Path to old schema file"
+    required: true
+  new_schema:
+    description: "Path to new schema file"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Install SchemaGit CLI
+      run: |
+        curl -L https://schemagit.io/install.sh | bash
+
+    - name: Run Diff
+      run: |
+        schemagit diff --old ${{ inputs.old_schema }} --new ${{ inputs.new_schema }} > diff.json
+
+    - name: Run Plan
+      run: |
+        schemagit plan --diff diff.json > plan.json
+
+    - name: Send to Cloud API
+      run: |
+        curl -X POST \
+          -H "Content-Type: application/json" \
+          -d @plan.json \
+          "${{ inputs.cloud_api }}/projects/${{ inputs.project_id }}/migrations/run" \
+          > cloud_result.json
+
+    - name: Check Cloud Result
+      run: |
+        STATUS=$(jq -r '.status' cloud_result.json)
+        if [ "$STATUS" = "error" ]; then
+          echo "Migration is unsafe. Failing PR."
+          exit 1
+        fi
+
+    - name: Print Result
+      run: |
+        cat cloud_result.json
