@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SchemaGit PR Pipeline</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<h1>PR Pipeline</h1>
+
+<div id="plan"></div>
+<div id="job"></div>
+<div id="logs"></div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const repo = params.get("repo");
+const pr = params.get("pr");
+
+fetch(`/api/pipeline/detail?repo=${repo}&pr=${pr}`)
+    .then(r => r.json())
+    .then(data => {
+
+        document.getElementById("plan").innerHTML = `
+            <h2>Migration Plan</h2>
+            <pre>${JSON.stringify(data.plan, null, 2)}</pre>
+        `;
+
+        document.getElementById("job").innerHTML = `
+            <h2>Job Status</h2>
+            <pre>${JSON.stringify(data.job, null, 2)}</pre>
+        `;
+
+        let logs = "";
+        data.logs.forEach(l => logs += `<pre>${l}</pre>`);
+
+        document.getElementById("logs").innerHTML = `
+            <h2>Logs</h2>
+            ${logs}
+        `;
+    });
+</script>
+
+</body>
+</html>
