@@ -1,0 +1,21 @@
+<h2>Agent Logs</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Time</th>
+            <th>Type</th>
+            <th>Message</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {{range .AgentLogs}}
+        <tr>
+            <td>{{.Timestamp}}</td>
+            <td>{{.Type}}</td>
+            <td>{{.Message}}</td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
