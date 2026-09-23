@@ -2,8 +2,6 @@ package agent
 
 import (
     "fmt"
-    "os"
-    "os/exec"
     "time"
 
     "github.com/sepanta/schemagit/internal/cloud"
@@ -13,19 +11,15 @@ import (
 )
 
 type Agent struct {
-    WorkDir string
-    APIKey  string
+    APIKey string
 }
 
-func NewAgent(workDir, apiKey string) *Agent {
-    return &Agent{
-        WorkDir: workDir,
-        APIKey:  apiKey,
-    }
+func NewAgent(apiKey string) *Agent {
+    return &Agent{APIKey: apiKey}
 }
 
 func (a *Agent) Start() {
-    log.Info("SchemaGit Agent started")
+    log.Info("Agent started")
 
     for {
         job := cloud.FetchNextJob(a.APIKey)
@@ -34,7 +28,93 @@ func (a *Agent) Start() {
             continue
         }
 
-        log.Info("Processing job: " + job.Type)
+        log.Info("Running job: " + job.Type)
+
+        cloud.MarkJobRunning(a.APIKey, job.ID)
+
+        err := a.runJob(job)
+        if err != nil {
+            cloud.MarkJobFailed(a.APIKey, job.ID, err.Error())
+        } else {
+            cloud.MarkJobDone(a.APIKey, job.ID)
+        }
+    }
+}
+
+func (a *Agent) runJob(job *cloud.Job) error {
+    switch job.Type {
+
+    case "github_push":
+        return a.handleGitHubPush(job)
+
+    case "manual_apply":
+        return a.handleManualApply(job)
+
+    default:
+        return fmt.Errorf("unknown job type: %s", job.Type)
+    }
+}
+
+func (a *Agent) handleGitHubPush(job *cloud.Job) error {
+    repo := job.Payload["repo"]
+    branch := job.Payload["branch"]
+    projectID := job.PayloadInt("project_id")
+
+    // Clone/Pull Repo
+    err := cloud.CloneOrPullRepo(repo, branch)
+    if err != nil {
+        return err
+    }
+
+    desired, err := schema.LoadDesiredSchemaFromFile("schema.sql")
+    if err != nil {
+        return err
+    }
+
+    current, err := schema.LoadCurrentSchema(projectID)
+    if err != nil {
+        return err
+    }
+
+    diff := schema.Diff(current, desired)
+    if diff.IsEmpty() {
+        return nil
+    }
+
+    mig, err := migrate.Generate(diff)
+    if err != nil {
+        return err
+    }
+
+    return migrate.Apply(projectID, mig)
+}
+
+func (a *Agent) handleManualApply(job *cloud.Job) error {
+    projectID := job.PayloadInt("project_id")
+    schemaPath := job.Payload["schema_path"]
+
+    desired, err := schema.LoadDesiredSchemaFromFile(schemaPath)
+    if err != nil {
+        return err
+    }
+
+    current, err := schema.LoadCurrentSchema(projectID)
+    if err != nil {
+        return err
+    }
+
+    diff := schema.Diff(current, desired)
+    if diff.IsEmpty() {
+        return nil
+    }
+
+    mig, err := migrate.Generate(diff)
+    if err != nil {
+        return err
+    }
+
+    return migrate.Apply(projectID, mig)
+}        log.Info("Processing job: " + job.Type)
 
         err := a.processJob(job)
         if err != nil {
