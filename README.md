@@ -1,5 +1,5 @@
 # SchemaGit
-
+[English](README.md) | [فارسی](README_FA.md)
 > A Git-inspired schema management and versioning system for structured data.
 
 SchemaGit is an open-source project designed to bring **Git-like versioning concepts to schemas and structured data**.
