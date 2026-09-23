@@ -648,6 +648,50 @@ func (s *Store) LoadAgentLogsByProject(pid int64) []AgentLog {
     return out
 }
 
+func (s *Store) LoadAllAgentLogs() []AgentLog {
+    rows, err := s.db.Query(`SELECT data FROM agent_logs ORDER BY id DESC LIMIT 1000`)
+    if err != nil {
+        return []AgentLog{}
+    }
+    defer rows.Close()
+
+    var out []AgentLog
+    for rows.Next() {
+        var raw string
+        if err := rows.Scan(&raw); err != nil {
+            continue
+        }
+        var obj AgentLog
+        json.Unmarshal([]byte(raw), &obj)
+        out = append(out, obj)
+    }
+
+    return out
+}
+
+func (s *Store) DeleteAgentLogsByProject(pid int64) error {
+    rows, err := s.db.Query(`SELECT id, data FROM agent_logs`)
+    if err != nil {
+        return err
+    }
+    defer rows.Close()
+
+    for rows.Next() {
+        var id int64
+        var raw string
+        if err := rows.Scan(&id, &raw); err != nil {
+            return err
+        }
+        var obj AgentLog
+        json.Unmarshal([]byte(raw), &obj)
+        if obj.ProjectID == pid {
+            _, _ = s.db.Exec(`DELETE FROM agent_logs WHERE id = ?`, id)
+        }
+    }
+
+    return nil
+}
+
 //
 // -----------------------------------------------------------------------------
 // Migrations Store
