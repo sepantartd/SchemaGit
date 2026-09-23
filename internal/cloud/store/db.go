@@ -12,6 +12,7 @@ func Init(path string) error {
     if err != nil {
         return err
     }
+
     DB = db
     return initTables()
 }
@@ -41,44 +42,9 @@ func initTables() error {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
 
-        CREATE TABLE IF NOT EXISTS users (
-            email TEXT PRIMARY KEY,
-            password TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS sessions (
+        CREATE TABLE IF NOT EXISTS api_tokens (
             token TEXT PRIMARY KEY,
             email TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS billing (
-            email TEXT PRIMARY KEY,
-            plan TEXT NOT NULL DEFAULT 'free'
-        );
-
-        CREATE TABLE IF NOT EXISTS projects (
-            id TEXT PRIMARY KEY,
-            owner TEXT NOT NULL,
-            name TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS migrations (
-            id TEXT PRIMARY KEY,
-            owner TEXT NOT NULL,
-            project TEXT NOT NULL,
-            created_at TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS orgs (
-            id TEXT PRIMARY KEY,
-            name TEXT,
-            owner TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS org_members (
-            org_id TEXT,
-            email TEXT,
-            role TEXT
         );
     `)
 

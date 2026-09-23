@@ -12,6 +12,7 @@ import (
     "github.com/sepanta/schemagit/internal/config"
     "github.com/sepanta/schemagit/internal/log"
     "github.com/sepanta/schemagit/internal/store"
+
     "schemagit/internal/cloud/api"
 )
 
@@ -45,7 +46,14 @@ func AddLog(t string, success bool, errMsg string, projectID int64) {
     if logsStore == nil {
         return
     }
-    logsStore.SaveCloudLog(store.CloudLog{Type: t, Success: success, Error: errMsg, Timestamp: time.Now().Unix(), ProjectID: projectID})
+    entry := store.CloudLog{
+        Type:      t,
+        Success:   success,
+        Error:     errMsg,
+        Timestamp: time.Now().Unix(),
+        ProjectID: projectID,
+    }
+    logsStore.SaveCloudLog(entry)
 }
 
 func GetLogsByProject(pid int64) []store.CloudLog {
@@ -64,35 +72,40 @@ func GetProjects() []store.Project {
 
 func StartAPIServer() {
     cfg := config.Default()
+
     InitLogs(".cloud_logs.db")
     InitProjects(".cloud_projects.db")
 
-    http.HandleFunc("/api/auth/signup", api.SignupHandler)
-    http.HandleFunc("/api/auth/login", api.LoginHandler)
-    http.HandleFunc("/api/billing/get", api.BillingGetHandler)
-    http.HandleFunc("/api/billing/set", api.BillingSetHandler)
-    http.HandleFunc("/api/project/create", api.CreateProjectHandler)
-    http.HandleFunc("/api/user/info", api.UserInfoHandler)
-    http.HandleFunc("/api/user/password", api.ChangePasswordHandler)
-    http.HandleFunc("/api/user/delete", api.DeleteAccountHandler)
-    http.HandleFunc("/api/org/create", api.OrgCreateHandler)
-    http.HandleFunc("/api/org/add_member", api.OrgAddMemberHandler)
-    http.HandleFunc("/api/org/members", api.OrgMembersHandler)
-    http.HandleFunc("/api/org/list", api.UserOrgsHandler)
     http.HandleFunc("/api/pipeline/plan", api.PipelinePlanHandler)
     http.HandleFunc("/api/project/overview", api.ProjectOverviewHandler)
+    http.HandleFunc("/api/tokens/create", api.TokenCreateHandler)
+    http.HandleFunc("/api/tokens/list", api.TokenListHandler)
+    http.HandleFunc("/api/tokens/delete", api.TokenDeleteHandler)
+    http.HandleFunc("/tokens", func(w http.ResponseWriter, r *http.Request) {
+        http.ServeFile(w, r, "ui/cloud/tokens.html")
+    })
     http.HandleFunc("/project", func(w http.ResponseWriter, r *http.Request) {
         http.ServeFile(w, r, "ui/cloud/project_overview.html")
-    })
-    http.HandleFunc("/org", func(w http.ResponseWriter, r *http.Request) {
-        http.ServeFile(w, r, "ui/cloud/org.html")
     })
 
     http.HandleFunc("/api/projects/", func(w http.ResponseWriter, r *http.Request) {
         path := r.URL.Path
-        if strings.HasSuffix(path, "/diff") { withAuth(withProjectFromURL(handleDiff))(w, r); return }
-        if strings.HasSuffix(path, "/apply") { withAuth(withProjectFromURL(handleApply))(w, r); return }
-        if strings.HasSuffix(path, "/webhook/github") { withAuth(withProjectFromURL(HandleGitHubWebhook))(w, r); return }
+
+        if strings.HasSuffix(path, "/diff") {
+            withAuth(withProjectFromURL(handleDiff))(w, r)
+            return
+        }
+
+        if strings.HasSuffix(path, "/apply") {
+            withAuth(withProjectFromURL(handleApply))(w, r)
+            return
+        }
+
+        if strings.HasSuffix(path, "/webhook/github") {
+            withAuth(withProjectFromURL(HandleGitHubWebhook))(w, r)
+            return
+        }
+
         respond(w, errors.New("unknown project endpoint"))
     })
 
@@ -100,6 +113,7 @@ func StartAPIServer() {
     http.HandleFunc("/dashboard/agent/logs", ProjectAgentLogs)
 
     go StartDashboardServer(cfg.CloudAPIKey)
+
     log.Info("Cloud API running on :9090")
     http.ListenAndServe(":9090", nil)
 }
@@ -108,11 +122,16 @@ func withAuth(next http.HandlerFunc) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         cfg := config.Default()
         key := r.Header.Get("X-API-Key")
+
         if key == "" || key != cfg.CloudAPIKey {
             w.WriteHeader(http.StatusUnauthorized)
-            json.NewEncoder(w).Encode(Response{Ok: false, Error: "unauthorized"})
+            json.NewEncoder(w).Encode(Response{
+                Ok:    false,
+                Error: "unauthorized",
+            })
             return
         }
+
         next(w, r)
     }
 }
@@ -143,6 +162,7 @@ func handleDiff(w http.ResponseWriter, r *http.Request, projectID int64) {
     }
 
     config.SetDBForProject(project)
+
     err := cli.RunDiff()
     AddLog("diff", err == nil, errString(err), projectID)
     respond(w, err)
@@ -156,6 +176,7 @@ func handleApply(w http.ResponseWriter, r *http.Request, projectID int64) {
     }
 
     config.SetDBForProject(project)
+
     err := cli.RunApply()
     AddLog("apply", err == nil, errString(err), projectID)
     respond(w, err)
@@ -169,11 +190,15 @@ func HandleGitHubWebhook(w http.ResponseWriter, r *http.Request, projectID int64
     }
 
     config.SetDBForProject(project)
+
     err1 := cli.RunDiff()
     err2 := cli.RunApply()
+
     success := err1 == nil && err2 == nil
     errMsg := errString(err1) + " | " + errString(err2)
+
     AddLog("webhook", success, errMsg, projectID)
+
     respond(w, nil)
 }
 

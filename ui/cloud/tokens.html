@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Tokens</title>
+</head>
+<body>
+
+<h1>API Tokens</h1>
+
+<button onclick="createToken()">Create New Token</button>
+
+<h2>Your Tokens</h2>
+<div id="list"></div>
+
+<script>
+function loadTokens() {
+    fetch("/api/tokens/list", {
+        headers: { "Authorization": localStorage.getItem("token") }
+    })
+    .then(r => r.json())
+    .then(tokens => {
+        let html = "";
+        tokens.forEach(t => {
+            html += `
+                <div>
+                    <code>${t}</code>
+                    <button onclick="del('${t}')">Delete</button>
+                </div>
+            `;
+        });
+        document.getElementById("list").innerHTML = html;
+    });
+}
+
+function createToken() {
+    fetch("/api/tokens/create", {
+        method: "POST",
+        headers: { "Authorization": localStorage.getItem("token") }
+    })
+    .then(r => r.json())
+    .then(data => {
+        alert("New Token: " + data.token);
+        loadTokens();
+    });
+}
+
+function del(t) {
+    fetch("/api/tokens/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: t })
+    })
+    .then(() => loadTokens());
+}
+
+loadTokens();
+</script>
+
+</body>
+</html>
