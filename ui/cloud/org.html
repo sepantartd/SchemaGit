@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Organizations</title>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 0; padding: 24px; background: #f6f8fa; }
+        main { max-width: 840px; margin: 0 auto; }
+        .card { background: #fff; border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        input, select, button { display: block; width: 100%; box-sizing: border-box; margin-top: 8px; padding: 10px; }
+        button { background: #0969da; color: white; border: 0; border-radius: 6px; cursor: pointer; }
+        .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+        .small { font-size: 0.9rem; color: #57606a; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Organizations</h1>
+
+    <div class="card">
+        <h2>Your Organizations</h2>
+        <div id="orgs"></div>
+    </div>
+
+    <div class="card">
+        <h2>Create Organization</h2>
+        <input id="orgName" placeholder="Organization name">
+        <button onclick="createOrg()">Create</button>
+    </div>
+
+    <div class="card">
+        <h2>Add Member</h2>
+        <div class="row">
+            <input id="orgID" placeholder="Org ID">
+            <input id="memberEmail" placeholder="Member email">
+            <select id="memberRole">
+                <option value="member">Member</option>
+                <option value="admin">Admin</option>
+                <option value="owner">Owner</option>
+            </select>
+        </div>
+        <button onclick="addMember()">Add member</button>
+    </div>
+
+    <div class="card">
+        <h2>Organization Members</h2>
+        <div class="row">
+            <input id="membersOrgID" placeholder="Org ID">
+            <button onclick="loadMembers()">Load members</button>
+        </div>
+        <div id="members"></div>
+    </div>
+</main>
+
+<script>
+function authHeaders(extra = {}) {
+    return Object.assign({ Authorization: localStorage.getItem("token") }, extra);
+}
+
+function loadOrgs() {
+    fetch("/api/org/list", { headers: authHeaders() })
+        .then(r => r.json())
+        .then(data => {
+            if (!data || !data.length) {
+                document.getElementById("orgs").innerHTML = "<div class=\"small\">No organizations yet.</div>";
+                return;
+            }
+            const html = data.map(o => `<div><strong>${o.name}</strong> — ID: ${o.id}</div>`).join("");
+            document.getElementById("orgs").innerHTML = html;
+        });
+}
+
+function createOrg() {
+    fetch("/api/org/create", {
+        method: "POST",
+        headers: authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ name: document.getElementById("orgName").value })
+    }).then(() => loadOrgs());
+}
+
+function addMember() {
+    fetch("/api/org/add_member", {
+        method: "POST",
+        headers: authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+            org_id: document.getElementById("orgID").value,
+            email: document.getElementById("memberEmail").value,
+            role: document.getElementById("memberRole").value
+        })
+    }).then(() => alert("Member added"));
+}
+
+function loadMembers() {
+    const orgID = document.getElementById("membersOrgID").value;
+    fetch(`/api/org/members?org=${encodeURIComponent(orgID)}`, { headers: authHeaders() })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById("members").innerHTML = (data || []).map(m => `<div>${m.email} — ${m.role}</div>`).join("") || "<div class=\"small\">No members.</div>";
+        });
+}
+
+loadOrgs();
+</script>
+</body>
+</html>
