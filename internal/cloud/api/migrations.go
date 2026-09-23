@@ -9,6 +9,7 @@ import (
     "schemagit/internal/schema/validator"
     "schemagit/internal/schema/planner"
     "schemagit/internal/cloud/runner"
+    "schemagit/internal/cloud/store"
 )
 
 type RunMigrationRequest struct {
@@ -65,6 +66,9 @@ func RunMigrationHandler(r *runner.Runner) http.HandlerFunc {
             Status: string(job.Status),
             Result: job.Result,
         }
+
+        // Save job logs
+        store.SaveLog(job.ID, job.Result)
 
         json.NewEncoder(w).Encode(resp)
     }

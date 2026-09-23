@@ -2,6 +2,8 @@ package runner
 
 import "github.com/google/uuid"
 
+import "schemagit/internal/cloud/store"
+
 type Runner struct {
     Queue    *Queue
     Executor *Executor
@@ -22,6 +24,8 @@ func (r *Runner) RunMigration(projectID string, plan []string) (*Job, error) {
         Status:    Pending,
     }
 
+    store.SaveJob(&job)
+
     r.Queue.Add(job)
 
     next := r.Queue.Next()
@@ -30,5 +34,8 @@ func (r *Runner) RunMigration(projectID string, plan []string) (*Job, error) {
     }
 
     err := r.Executor.Execute(next)
+
+    store.SaveJob(next)
+
     return next, err
 }
