@@ -8,37 +8,52 @@ import (
     "github.com/sepanta/schemagit/internal/log"
     "github.com/sepanta/schemagit/internal/migrate"
     "github.com/sepanta/schemagit/internal/schema"
+    "github.com/sepanta/schemagit/internal/store"
 )
 
 type Agent struct {
-    APIKey  string
-    WorkDir string
-    Token   string
+    cfg *AgentConfig
 }
 
-func NewAgent(apiKey, workDir, token string) *Agent {
-    return &Agent{APIKey: apiKey, WorkDir: workDir, Token: token}
+func NewAgent(cfg *AgentConfig) *Agent {
+    return &Agent{cfg: cfg}
 }
 
 func (a *Agent) Start() {
     log.Info("Agent started")
 
     for {
-        job := cloud.FetchNextJob(a.APIKey)
+        job := cloud.FetchNextJob(a.cfg.APIKey)
         if job == nil {
             time.Sleep(2 * time.Second)
             continue
         }
 
-        cloud.MarkJobRunning(a.APIKey, job.ID)
+        // SECURITY: Check project access
+        projectID := job.PayloadInt("project_id")
+        if !a.isProjectAllowed(projectID) {
+            cloud.MarkJobFailed(a.cfg.APIKey, job.ID, "agent not allowed for this project")
+            continue
+        }
+
+        cloud.MarkJobRunning(a.cfg.APIKey, job.ID)
 
         err := a.runJob(job)
         if err != nil {
-            cloud.MarkJobFailed(a.APIKey, job.ID, err.Error())
+            cloud.MarkJobFailed(a.cfg.APIKey, job.ID, err.Error())
         } else {
-            cloud.MarkJobDone(a.APIKey, job.ID)
+            cloud.MarkJobDone(a.cfg.APIKey, job.ID)
         }
     }
+}
+
+func (a *Agent) isProjectAllowed(pid int64) bool {
+    for _, allowed := range a.cfg.Projects {
+        if allowed == pid {
+            return true
+        }
+    }
+    return false
 }
 
 func (a *Agent) runJob(job *store.Job) error {
@@ -56,103 +71,4 @@ func (a *Agent) runJob(job *store.Job) error {
     default:
         return fmt.Errorf("unknown job type: %s", job.Type)
     }
-}
-
-func (a *Agent) handlePush(job *store.Job) error {
-    repo := job.Payload["repo"]
-    branch := job.Payload["branch"]
-    projectID := job.PayloadInt("project_id")
-
-    err := cloud.GitCloneOrPull(repo, branch, a.Token, a.WorkDir)
-    if err != nil {
-        return err
-    }
-
-    desired, err := schema.LoadDesiredSchemaFromFile(a.WorkDir + "/schema.sql")
-    if err != nil {
-        return err
-    }
-
-    current, err := schema.LoadCurrentSchema(projectID)
-    if err != nil {
-        return err
-    }
-
-    diff := schema.Diff(current, desired)
-    if diff.IsEmpty() {
-        return nil
-    }
-
-    mig, err := migrate.Generate(diff)
-    if err != nil {
-        return err
-    }
-
-    return migrate.Apply(projectID, mig)
-}
-
-func (a *Agent) handlePRDiff(job *store.Job) error {
-    repo := job.Payload["repo"]
-    branch := job.Payload["branch"]
-    projectID := job.PayloadInt("project_id")
-
-    err := cloud.GitCloneOrPull(repo, branch, a.Token, a.WorkDir)
-    if err != nil {
-        return err
-    }
-
-    desired, err := schema.LoadDesiredSchemaFromFile(a.WorkDir + "/schema.sql")
-    if err != nil {
-        return err
-    }
-
-    current, err := schema.LoadCurrentSchema(projectID)
-    if err != nil {
-        return err
-    }
-
-    diff := schema.Diff(current, desired)
-
-    cloud.SaveCloudLog(store.CloudLog{
-        Type:      "pr_diff",
-        Success:   true,
-        Error:     "",
-        Timestamp: time.Now().Unix(),
-        ProjectID: projectID,
-    })
-
-    return nil
-}
-
-func (a *Agent) handlePRApply(job *store.Job) error {
-    repo := job.Payload["repo"]
-    branch := job.Payload["branch"]
-    projectID := job.PayloadInt("project_id")
-
-    err := cloud.GitCloneOrPull(repo, branch, a.Token, a.WorkDir)
-    if err != nil {
-        return err
-    }
-
-    desired, err := schema.LoadDesiredSchemaFromFile(a.WorkDir + "/schema.sql")
-    if err != nil {
-        return err
-    }
-
-    current, err := schema.LoadCurrentSchema(projectID)
-    if err != nil {
-        return err
-    }
-
-    diff := schema.Diff(current, desired)
-    if diff.IsEmpty() {
-        return nil
-    }
-
-    mig, err := migrate.Generate(diff)
-    if err != nil {
-        return err
-    }
-
-    return migrate.Apply(projectID, mig)
 }
