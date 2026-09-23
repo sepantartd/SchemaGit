@@ -2,32 +2,64 @@ package cloud
 
 import (
     "encoding/json"
-    "time"
+    "net/http"
+    "strconv"
+    "strings"
+
+    "github.com/sepanta/schemagit/internal/store"
 )
 
-type Job struct {
-    ID      int64             `json:"id"`
-    Type    string            `json:"type"`
-    Payload map[string]string `json:"payload"`
-    Created int64             `json:"created"`
-}
-
-func FetchNextJob(apiKey string) *Job {
-    // Cloud API call
-    res := apiCall("/jobs/next", apiKey)
-    if res == nil {
-        return nil
+func CreateJobAPI(w http.ResponseWriter, r *http.Request) {
+    if r.Method != "POST" {
+        http.Error(w, "method not allowed", 405)
+        return
     }
 
-    var job Job
-    json.Unmarshal(res.Body, &job)
-    return &job
+    var body struct {
+        Type    string            `json:"type"`
+        Payload map[string]string `json:"payload"`
+    }
+
+    json.NewDecoder(r.Body).Decode(&body)
+
+    job := store.Job{
+        Type:    body.Type,
+        Payload: body.Payload,
+    }
+
+    _ = projStore.CreateJob(job)
+
+    w.Write([]byte(`{"ok":true}`))
 }
 
-func ReportJobSuccess(apiKey string, jobID int64) {
-    apiCall("/jobs/success?id="+fmtInt(jobID), apiKey)
+func FetchNextJobAPI(w http.ResponseWriter, r *http.Request) {
+    job, err := projStore.FetchNextPendingJob()
+    if err != nil {
+        w.Write([]byte(`{"job":null}`))
+        return
+    }
+
+    raw, _ := json.Marshal(job)
+    w.Write(raw)
 }
 
-func ReportJobFailure(apiKey string, jobID int64, err string) {
-    apiCall("/jobs/failure?id="+fmtInt(jobID)+"&error="+err, apiKey)
+func UpdateJobStatusAPI(w http.ResponseWriter, r *http.Request) {
+    idStr := r.URL.Query().Get("id")
+    status := r.URL.Query().Get("status")
+    errMsg := r.URL.Query().Get("error")
+
+    id, _ := strconv.ParseInt(idStr, 10, 64)
+
+    projStore.UpdateJobStatus(id, status, errMsg)
+
+    w.Write([]byte(`{"ok":true}`))
+}
+
+func IncrementJobAttemptsAPI(w http.ResponseWriter, r *http.Request) {
+    idStr := r.URL.Query().Get("id")
+    id, _ := strconv.ParseInt(idStr, 10, 64)
+
+    projStore.IncrementJobAttempts(id)
+
+    w.Write([]byte(`{"ok":true}`))
 }
