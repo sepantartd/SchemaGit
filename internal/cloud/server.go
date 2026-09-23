@@ -90,10 +90,15 @@ func StartAPIServer() {
     InitLogs(".cloud_logs.db")
     InitProjects(".cloud_projects.db")
 
+    http.HandleFunc("/api/auth/signup", api.SignupHandler)
+    http.HandleFunc("/api/auth/login", api.LoginHandler)
     http.HandleFunc("/api/pipeline/plan", api.PipelinePlanHandler)
     http.HandleFunc("/api/project/overview", api.ProjectOverviewHandler)
     http.HandleFunc("/project", func(w http.ResponseWriter, r *http.Request) {
         http.ServeFile(w, r, "ui/cloud/project_overview.html")
+    })
+    http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+        http.ServeFile(w, r, "ui/cloud/login.html")
     })
 
     http.HandleFunc("/api/projects/", func(w http.ResponseWriter, r *http.Request) {
