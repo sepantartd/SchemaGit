@@ -19,6 +19,7 @@
 <div id="job"></div>
 <div id="logs"></div>
 <div id="diff"></div>
+<div id="planViewer"></div>
 
 <script>
 const params = new URLSearchParams(window.location.search);
@@ -96,6 +97,41 @@ fetch(`/api/pipeline/diff?repo=${repo}&pr=${pr}`)
         });
 
         document.getElementById("diff").innerHTML = html;
+    });
+</script>
+
+<script>
+// NEW: Plan Viewer
+fetch(`/api/pipeline/plan?repo=${repo}&pr=${pr}`)
+    .then(r => r.json())
+    .then(plan => {
+        if (!plan || !plan.steps) {
+            document.getElementById("planViewer").innerHTML = `
+                <h2>Plan Viewer</h2>
+                <p>No plan data available.</p>
+            `;
+            return;
+        }
+
+        let html = "<h2>Plan Viewer</h2>";
+
+        plan.steps.forEach(step => {
+            let cls = "color: #333;";
+            if (step.type === "add") cls = "color: #0a0;";
+            if (step.type === "remove") cls = "color: #c00;";
+            if (step.type === "modify") cls = "color: #06c;";
+
+            html += `
+                <div style="border:1px solid #ddd; padding:8px; margin-bottom:8px;">
+                    <div style="${cls}">
+                        <strong>${step.type.toUpperCase()}</strong>
+                    </div>
+                    <pre>${step.statement}</pre>
+                </div>
+            `;
+        });
+
+        document.getElementById("planViewer").innerHTML = html;
     });
 </script>
 

@@ -13,6 +13,7 @@ func NewServer() *mux.Router {
     router.HandleFunc("/api/pipeline/list", api.PipelineListHandler).Methods("GET")
     router.HandleFunc("/api/pipeline/detail", api.PipelineDetailHandler).Methods("GET")
     router.HandleFunc("/api/pipeline/diff", api.PipelineDiffHandler).Methods("GET")
+    router.HandleFunc("/api/pipeline/plan", api.PipelinePlanHandler).Methods("GET")
 
     // UI routes
     router.HandleFunc("/pipeline", func(w http.ResponseWriter, r *http.Request) {

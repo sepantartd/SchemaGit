@@ -62,3 +62,16 @@ func PipelineDiffHandler(w http.ResponseWriter, req *http.Request) {
         "plan": plan,
     })
 }
+
+func PipelinePlanHandler(w http.ResponseWriter, req *http.Request) {
+    repo := req.URL.Query().Get("repo")
+    pr := req.URL.Query().Get("pr")
+
+    plan, err := store.LoadPlan(repo, atoi(pr))
+    if err != nil {
+        http.Error(w, err.Error(), 500)
+        return
+    }
+
+    json.NewEncoder(w).Encode(plan)
+}
