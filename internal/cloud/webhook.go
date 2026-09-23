@@ -3,47 +3,27 @@ package cloud
 import (
     "encoding/json"
     "net/http"
-
-    "github.com/sepanta/schemagit/internal/cli"
-    "github.com/sepanta/schemagit/internal/log"
 )
 
-type WebhookResponse struct {
-    Ok    bool   `json:"ok"`
-    Error string `json:"error,omitempty"`
-}
+func StartWebhookServer(apiKey string) {
+    http.HandleFunc("/webhook/github", func(w http.ResponseWriter, r *http.Request) {
 
-func HandleGitHubWebhook(w http.ResponseWriter, r *http.Request) {
-    var payload map[string]interface{}
+        var payload map[string]interface{}
+        json.NewDecoder(r.Body).Decode(&payload)
 
-    if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-        w.WriteHeader(http.StatusBadRequest)
-        json.NewEncoder(w).Encode(WebhookResponse{
-            Ok:    false,
-            Error: "invalid json",
+        repo := payload["repository"].(map[string]interface{})["clone_url"].(string)
+        branch := payload["ref"].(string)
+
+        projectID := findProjectByWebhook(r.URL.Query().Get("id"))
+
+        CreateJob(apiKey, "github_push", map[string]string{
+            "repo":       repo,
+            "branch":     branch,
+            "project_id": fmtInt(projectID),
         })
-        return
-    }
 
-    log.Info("Webhook received → running diff/apply")
-
-    if err := cli.RunDiff(); err != nil {
-        json.NewEncoder(w).Encode(WebhookResponse{
-            Ok:    false,
-            Error: err.Error(),
-        })
-        return
-    }
-
-    if err := cli.RunApply(); err != nil {
-        json.NewEncoder(w).Encode(WebhookResponse{
-            Ok:    false,
-            Error: err.Error(),
-        })
-        return
-    }
-
-    json.NewEncoder(w).Encode(WebhookResponse{
-        Ok: true,
+        w.WriteHeader(200)
     })
+
+    http.ListenAndServe(":8090", nil)
 }
