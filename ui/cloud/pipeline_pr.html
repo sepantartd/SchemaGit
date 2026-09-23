@@ -3,6 +3,13 @@
 <head>
     <title>SchemaGit PR Pipeline</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .diff-added { color: #0a0; }
+        .diff-removed { color: #c00; }
+        .diff-changed { color: #06c; }
+        .diff-block { border: 1px solid #ddd; padding: 8px; margin-bottom: 8px; }
+        pre { background: #f7f7f7; padding: 8px; }
+    </style>
 </head>
 <body>
 
@@ -11,12 +18,14 @@
 <div id="plan"></div>
 <div id="job"></div>
 <div id="logs"></div>
+<div id="diff"></div>
 
 <script>
 const params = new URLSearchParams(window.location.search);
 const repo = params.get("repo");
 const pr = params.get("pr");
 
+// Existing detail (plan + job + logs)
 fetch(`/api/pipeline/detail?repo=${repo}&pr=${pr}`)
     .then(r => r.json())
     .then(data => {
@@ -38,6 +47,55 @@ fetch(`/api/pipeline/detail?repo=${repo}&pr=${pr}`)
             <h2>Logs</h2>
             ${logs}
         `;
+    });
+
+// NEW: Diff Viewer
+fetch(`/api/pipeline/diff?repo=${repo}&pr=${pr}`)
+    .then(r => r.json())
+    .then(data => {
+        const plan = data.plan || {};
+        const diff = plan.diff || plan.Diff || null;
+
+        if (!diff) {
+            document.getElementById("diff").innerHTML = `
+                <h2>Diff</h2>
+                <p>No diff data available.</p>
+            `;
+            return;
+        }
+
+        let html = "<h2>Diff</h2>";
+
+        // We assume diff.tables or diff.Tables exists.
+        const tables = diff.tables || diff.Tables || [];
+
+        tables.forEach(t => {
+            html += `<div class="diff-block"><h3>Table: ${t.name || t.Name}</h3>`;
+
+            const changes = t.changes || t.Changes || [];
+            changes.forEach(c => {
+                const type = c.type || c.Type;
+                const col = c.column || c.Column || "";
+                const from = c.from || c.From || "";
+                const to = c.to || c.To || "";
+
+                let cls = "";
+                if (type === "add") cls = "diff-added";
+                else if (type === "remove") cls = "diff-removed";
+                else cls = "diff-changed";
+
+                html += `
+                    <div class="${cls}">
+                        <strong>${type.toUpperCase()}</strong> column <code>${col}</code>
+                        ${from || to ? ` (${from} → ${to})` : ""}
+                    </div>
+                `;
+            });
+
+            html += "</div>";
+        });
+
+        document.getElementById("diff").innerHTML = html;
     });
 </script>
 

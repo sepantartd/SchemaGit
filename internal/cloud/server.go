@@ -12,6 +12,7 @@ func NewServer() *mux.Router {
     // API routes
     router.HandleFunc("/api/pipeline/list", api.PipelineListHandler).Methods("GET")
     router.HandleFunc("/api/pipeline/detail", api.PipelineDetailHandler).Methods("GET")
+    router.HandleFunc("/api/pipeline/diff", api.PipelineDiffHandler).Methods("GET")
 
     // UI routes
     router.HandleFunc("/pipeline", func(w http.ResponseWriter, r *http.Request) {
@@ -22,7 +23,6 @@ func NewServer() *mux.Router {
         http.ServeFile(w, r, "ui/cloud/pipeline_pr.html")
     })
 
-    // Static files (CSS, JS)
     router.PathPrefix("/static/").Handler(
         http.StripPrefix("/static/", http.FileServer(http.Dir("ui/static"))),
     )
