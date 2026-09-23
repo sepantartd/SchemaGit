@@ -1,28 +1,24 @@
 package agent
 
 import (
-    "os"
     "gopkg.in/yaml.v3"
+    "os"
 )
 
-type AgentConfig struct {
-    APIKey   string `yaml:"api_key"`
-    WorkDir  string `yaml:"work_dir"`
-    Token    string `yaml:"token"`
-    Projects []int64 `yaml:"projects"`
+type Config struct {
+    CloudURL        string `yaml:"cloud_url"`
+    APIKey          string `yaml:"api_key"`
+    ProjectID       int64  `yaml:"project_id"`
+    IntervalSeconds int    `yaml:"interval_seconds"`
+    LogLevel        string `yaml:"log_level"`
 }
 
-func LoadConfig(path string) (*AgentConfig, error) {
+func LoadConfig(path string) (Config, error) {
+    var cfg Config
     raw, err := os.ReadFile(path)
     if err != nil {
-        return nil, err
+        return cfg, err
     }
-
-    var cfg AgentConfig
     err = yaml.Unmarshal(raw, &cfg)
-    if err != nil {
-        return nil, err
-    }
-
-    return &cfg, nil
+    return cfg, err
 }
