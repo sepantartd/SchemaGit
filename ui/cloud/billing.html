@@ -11,6 +11,7 @@
 
 <button onclick="setPlan('free')">Switch to Free</button>
 <button onclick="setPlan('pro')">Switch to Pro</button>
+<button onclick="pay()">Buy Pro (Stripe)</button>
 
 <script>
 function load() {
@@ -33,6 +34,17 @@ function setPlan(plan) {
         body: JSON.stringify({ plan })
     })
     .then(() => load());
+}
+
+function pay() {
+    fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Authorization": localStorage.getItem("token") }
+    })
+    .then(r => r.json())
+    .then(data => {
+        window.location = data.checkout_url;
+    });
 }
 
 load();

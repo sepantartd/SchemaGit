@@ -82,6 +82,8 @@ func StartAPIServer() {
     http.HandleFunc("/api/auth/login", api.LoginHandler)
     http.HandleFunc("/api/billing/get", api.BillingGetHandler)
     http.HandleFunc("/api/billing/set", api.BillingSetHandler)
+    http.HandleFunc("/api/stripe/checkout", api.StripeCheckoutHandler)
+    http.HandleFunc("/api/stripe/webhook", api.StripeWebhookHandler)
     http.HandleFunc("/api/pipeline/plan", api.PipelinePlanHandler)
     http.HandleFunc("/api/project/overview", api.ProjectOverviewHandler)
     http.HandleFunc("/project", func(w http.ResponseWriter, r *http.Request) {
