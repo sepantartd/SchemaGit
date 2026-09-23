@@ -109,6 +109,8 @@ func StartAPIServer() {
         respond(w, errors.New("unknown project endpoint"))
     })
 
+    http.HandleFunc("/agent/logs", RequireAPIKey(AgentLogsAPI))
+
     go StartDashboardServer(cfg.CloudAPIKey)
 
     log.Info("Cloud API running on :9090")
