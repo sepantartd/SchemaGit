@@ -56,9 +56,13 @@ func StartAPIServer() {
     http.HandleFunc("/api/billing/get", api.BillingGetHandler)
     http.HandleFunc("/api/billing/set", api.BillingSetHandler)
     http.HandleFunc("/api/project/create", api.CreateProjectHandler)
+    http.HandleFunc("/api/user/info", api.UserInfoHandler)
+    http.HandleFunc("/api/user/password", api.ChangePasswordHandler)
+    http.HandleFunc("/api/user/delete", api.DeleteAccountHandler)
     http.HandleFunc("/api/pipeline/plan", api.PipelinePlanHandler)
     http.HandleFunc("/api/project/overview", api.ProjectOverviewHandler)
     http.HandleFunc("/project", func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, "ui/cloud/project_overview.html") })
+    http.HandleFunc("/account", func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, "ui/cloud/account.html") })
     http.HandleFunc("/api/projects/", func(w http.ResponseWriter, r *http.Request) {
         path := r.URL.Path
         if strings.HasSuffix(path, "/diff") { withAuth(withProjectFromURL(handleDiff))(w,r); return }

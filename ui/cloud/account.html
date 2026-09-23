@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Account Settings</title>
+    <style>
+        :root { color-scheme: light dark; }
+        body { font-family: system-ui, sans-serif; margin: 0; padding: 24px; background: #f6f8fa; color: #24292f; }
+        main { max-width: 760px; margin: 0 auto; }
+        .card { background: white; border: 1px solid #d0d7de; border-radius: 8px; padding: 20px; margin: 16px 0; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+        .metric { background: #f6f8fa; border-radius: 6px; padding: 14px; }
+        .metric strong { display: block; font-size: 1.4rem; }
+        label, input, button { display: block; width: 100%; box-sizing: border-box; }
+        label { margin-top: 10px; font-weight: 600; }
+        input { padding: 10px; margin-top: 5px; border: 1px solid #8c959f; border-radius: 6px; }
+        button { max-width: 220px; padding: 10px 14px; margin-top: 12px; border: 0; border-radius: 6px; background: #0969da; color: white; cursor: pointer; }
+        button.danger { background: #cf222e; }
+        .error { color: #cf222e; margin-top: 8px; }
+        @media (max-width: 480px) { body { padding: 12px; } .card { padding: 14px; } }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Account Settings</h1>
+    <section class="card" id="info">Loading account information…</section>
+    <section class="card">
+        <h2>Change Password</h2>
+        <label for="oldpw">Old password</label><input id="oldpw" type="password">
+        <label for="newpw">New password</label><input id="newpw" type="password">
+        <button onclick="changePw()">Change password</button><div id="pwError" class="error"></div>
+    </section>
+    <section class="card">
+        <h2>Delete Account</h2>
+        <p>This permanently deletes your account and associated cloud data.</p>
+        <button class="danger" onclick="deleteAcc()">Delete account</button>
+    </section>
+</main>
+<script>
+const token = localStorage.getItem("token");
+const headers = () => ({ "Authorization": token, "Content-Type": "application/json" });
+function loadInfo() {
+    fetch("/api/user/info", { headers: headers() }).then(async r => {
+        if (!r.ok) throw new Error(await r.text()); return r.json();
+    }).then(data => {
+        document.getElementById("info").innerHTML = `<h2>Account Overview</h2><p><strong>Email:</strong> ${data.email}</p><p><strong>Plan:</strong> ${data.plan} (${data.billing.status})</p><div class="grid"><div class="metric"><strong>${data.projects}</strong>Projects / ${data.limits.projects}</div><div class="metric"><strong>${data.migrations}</strong>Migrations / ${data.limits.migrations}</div></div>`;
+    }).catch(e => { document.getElementById("info").innerText = e.message; });
+}
+function changePw() {
+    fetch("/api/user/password", { method:"POST", headers:headers(), body:JSON.stringify({old:document.getElementById("oldpw").value,new:document.getElementById("newpw").value}) }).then(async r => { if (!r.ok) { document.getElementById("pwError").innerText=await r.text(); return; } alert("Password changed"); });
+}
+function deleteAcc() {
+    if (!confirm("Are you sure? This cannot be undone.")) return;
+    fetch("/api/user/delete", { method:"POST", headers:headers() }).then(() => { localStorage.removeItem("token"); window.location="/login"; });
+}
+loadInfo();
+</script>
+</body>
+</html>
