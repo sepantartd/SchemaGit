@@ -1,235 +1,31 @@
 package cloud
 
 import (
-    "encoding/json"
-    "errors"
     "net/http"
-    "strconv"
-    "strings"
-    "time"
-
-    "github.com/sepanta/schemagit/internal/cli"
-    "github.com/sepanta/schemagit/internal/config"
-    "github.com/sepanta/schemagit/internal/log"
-    "github.com/sepanta/schemagit/internal/store"
+    "github.com/gorilla/mux"
+    "schemagit/internal/cloud/api"
 )
 
-type Response struct {
-    Ok    bool   `json:"ok"`
-    Error string `json:"error,omitempty"`
-}
+func NewServer() *mux.Router {
+    router := mux.NewRouter()
 
-var logsStore *store.Store
-var projStore *store.Store
+    // API routes
+    router.HandleFunc("/api/pipeline/list", api.PipelineListHandler).Methods("GET")
+    router.HandleFunc("/api/pipeline/detail", api.PipelineDetailHandler).Methods("GET")
 
-//
-// Init
-//
-
-func InitLogs(path string) {
-    st, err := store.Open(path)
-    if err != nil {
-        log.Error("cannot open logs store: " + err.Error())
-        return
-    }
-    logsStore = st
-}
-
-func InitProjects(path string) {
-    st, err := store.Open(path)
-    if err != nil {
-        log.Error("cannot open projects store: " + err.Error())
-        return
-    }
-    projStore = st
-}
-
-//
-// Helpers
-//
-
-func AddLog(t string, success bool, errMsg string, projectID int64) {
-    if logsStore == nil {
-        return
-    }
-
-    entry := store.CloudLog{
-        Type:      t,
-        Success:   success,
-        Error:     errMsg,
-        Timestamp: time.Now().Unix(),
-        ProjectID: projectID,
-    }
-
-    logsStore.SaveCloudLog(entry)
-}
-
-func GetLogsByProject(pid int64) []store.CloudLog {
-    if logsStore == nil {
-        return []store.CloudLog{}
-    }
-    return logsStore.LoadLogsByProject(pid)
-}
-
-func GetProjects() []store.Project {
-    if projStore == nil {
-        return []store.Project{}
-    }
-    return projStore.LoadProjects()
-}
-
-//
-// API Server
-//
-
-func StartAPIServer() {
-    cfg := config.Default()
-
-    InitLogs(".cloud_logs.db")
-    InitProjects(".cloud_projects.db")
-
-    http.HandleFunc("/api/projects/", func(w http.ResponseWriter, r *http.Request) {
-        path := r.URL.Path
-
-        if strings.HasSuffix(path, "/diff") {
-            withAuth(withProjectFromURL(handleDiff))(w, r)
-            return
-        }
-
-        if strings.HasSuffix(path, "/apply") {
-            withAuth(withProjectFromURL(handleApply))(w, r)
-            return
-        }
-
-        if strings.HasSuffix(path, "/webhook/github") {
-            withAuth(withProjectFromURL(HandleGitHubWebhook))(w, r)
-            return
-        }
-
-        respond(w, errors.New("unknown project endpoint"))
+    // UI routes
+    router.HandleFunc("/pipeline", func(w http.ResponseWriter, r *http.Request) {
+        http.ServeFile(w, r, "ui/cloud/pipeline.html")
     })
 
-    http.HandleFunc("/agent/logs", RequireAPIKey(AgentLogsAPI))
-    http.HandleFunc("/dashboard/agent/logs", ProjectAgentLogs)
+    router.HandleFunc("/pipeline/pr", func(w http.ResponseWriter, r *http.Request) {
+        http.ServeFile(w, r, "ui/cloud/pipeline_pr.html")
+    })
 
-    go StartDashboardServer(cfg.CloudAPIKey)
+    // Static files (CSS, JS)
+    router.PathPrefix("/static/").Handler(
+        http.StripPrefix("/static/", http.FileServer(http.Dir("ui/static"))),
+    )
 
-    log.Info("Cloud API running on :9090")
-    http.ListenAndServe(":9090", nil)
-}
-
-//
-// Auth
-//
-
-func withAuth(next http.HandlerFunc) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        cfg := config.Default()
-        key := r.Header.Get("X-API-Key")
-
-        if key == "" || key != cfg.CloudAPIKey {
-            w.WriteHeader(http.StatusUnauthorized)
-            json.NewEncoder(w).Encode(Response{
-                Ok:    false,
-                Error: "unauthorized",
-            })
-            return
-        }
-
-        next(w, r)
-    }
-}
-
-//
-// Project extractor
-//
-
-func withProjectFromURL(next func(http.ResponseWriter, *http.Request, int64)) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        parts := strings.Split(r.URL.Path, "/")
-        if len(parts) < 4 {
-            respond(w, errors.New("invalid project path"))
-            return
-        }
-
-        pid, err := strconv.ParseInt(parts[3], 10, 64)
-        if err != nil {
-            respond(w, errors.New("invalid project id"))
-            return
-        }
-
-        next(w, r, pid)
-    }
-}
-
-//
-// Handlers
-//
-
-func handleDiff(w http.ResponseWriter, r *http.Request, projectID int64) {
-    project := GetProjectByID(projectID)
-    if project == nil {
-        respond(w, errors.New("project not found"))
-        return
-    }
-
-    config.SetDBForProject(project)
-
-    err := cli.RunDiff()
-    AddLog("diff", err == nil, errString(err), projectID)
-    respond(w, err)
-}
-
-func handleApply(w http.ResponseWriter, r *http.Request, projectID int64) {
-    project := GetProjectByID(projectID)
-    if project == nil {
-        respond(w, errors.New("project not found"))
-        return
-    }
-
-    config.SetDBForProject(project)
-
-    err := cli.RunApply()
-    AddLog("apply", err == nil, errString(err), projectID)
-    respond(w, err)
-}
-
-func HandleGitHubWebhook(w http.ResponseWriter, r *http.Request, projectID int64) {
-    project := GetProjectByID(projectID)
-    if project == nil {
-        respond(w, errors.New("project not found"))
-        return
-    }
-
-    config.SetDBForProject(project)
-
-    err1 := cli.RunDiff()
-    err2 := cli.RunApply()
-
-    success := err1 == nil && err2 == nil
-    errMsg := errString(err1) + " | " + errString(err2)
-
-    AddLog("webhook", success, errMsg, projectID)
-
-    respond(w, nil)
-}
-
-//
-// Response helper
-//
-
-func respond(w http.ResponseWriter, err error) {
-    resp := Response{Ok: err == nil}
-    if err != nil {
-        resp.Error = err.Error()
-    }
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(resp)
-}
-
-func errString(err error) string {
-    if err == nil {
-        return ""
-    }
-    return err.Error()
+    return router
 }
