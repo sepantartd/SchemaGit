@@ -110,6 +110,7 @@ func StartAPIServer() {
     })
 
     http.HandleFunc("/agent/logs", RequireAPIKey(AgentLogsAPI))
+    http.HandleFunc("/dashboard/agent/logs", ProjectAgentLogs)
 
     go StartDashboardServer(cfg.CloudAPIKey)
 
