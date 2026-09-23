@@ -1,0 +1,11 @@
+[Unit]
+Description=SchemaGit Agent Service
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/schemagit agent --config /etc/schemagit/agent.yaml
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
