@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SchemaGit Pipeline</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<h1>Pipeline</h1>
+
+<div id="prs"></div>
+
+<script>
+fetch("/api/pipeline/list")
+    .then(r => r.json())
+    .then(prs => {
+        let html = "";
+        prs.forEach(pr => {
+            html += `
+                <div class="pr-item">
+                    <a href="/pipeline/pr?repo=${pr.repo}&pr=${pr.number}">
+                        PR #${pr.number} — ${pr.repo}
+                    </a>
+                    <span class="status">${pr.status}</span>
+                </div>
+            `;
+        });
+        document.getElementById("prs").innerHTML = html;
+    });
+</script>
+
+</body>
+</html>
