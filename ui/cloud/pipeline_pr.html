@@ -9,6 +9,11 @@
         .diff-changed { color: #06c; }
         .diff-block { border: 1px solid #ddd; padding: 8px; margin-bottom: 8px; }
         pre { background: #f7f7f7; padding: 8px; }
+        .log-line { padding: 4px; font-family: monospace; }
+        .log-info { color: #333; }
+        .log-warn { color: #d68a00; }
+        .log-error { color: #c00; font-weight: bold; }
+        .log-success { color: #0a0; }
     </style>
 </head>
 <body>
@@ -26,7 +31,7 @@ const params = new URLSearchParams(window.location.search);
 const repo = params.get("repo");
 const pr = params.get("pr");
 
-// Existing detail (plan + job + logs)
+// Existing detail (plan + job)
 fetch(`/api/pipeline/detail?repo=${repo}&pr=${pr}`)
     .then(r => r.json())
     .then(data => {
@@ -39,14 +44,6 @@ fetch(`/api/pipeline/detail?repo=${repo}&pr=${pr}`)
         document.getElementById("job").innerHTML = `
             <h2>Job Status</h2>
             <pre>${JSON.stringify(data.job, null, 2)}</pre>
-        `;
-
-        let logs = "";
-        data.logs.forEach(l => logs += `<pre>${l}</pre>`);
-
-        document.getElementById("logs").innerHTML = `
-            <h2>Logs</h2>
-            ${logs}
         `;
     });
 
@@ -98,9 +95,7 @@ fetch(`/api/pipeline/diff?repo=${repo}&pr=${pr}`)
 
         document.getElementById("diff").innerHTML = html;
     });
-</script>
 
-<script>
 // NEW: Plan Viewer
 fetch(`/api/pipeline/plan?repo=${repo}&pr=${pr}`)
     .then(r => r.json())
@@ -132,6 +127,29 @@ fetch(`/api/pipeline/plan?repo=${repo}&pr=${pr}`)
         });
 
         document.getElementById("planViewer").innerHTML = html;
+    });
+</script>
+
+<div id="logs"></div>
+
+<script>
+// Enhanced Job Logs Viewer
+fetch(`/api/pipeline/detail?repo=${repo}&pr=${pr}`)
+    .then(r => r.json())
+    .then(data => {
+        let logsHtml = "<h2>Logs</h2>";
+
+        data.logs.forEach(line => {
+            let cls = "log-info";
+
+            if (line.toLowerCase().includes("error")) cls = "log-error";
+            if (line.toLowerCase().includes("warning")) cls = "log-warn";
+            if (line.toLowerCase().includes("success")) cls = "log-success";
+
+            logsHtml += `<div class="log-line ${cls}">${line}</div>`;
+        });
+
+        document.getElementById("logs").innerHTML = logsHtml;
     });
 </script>
 

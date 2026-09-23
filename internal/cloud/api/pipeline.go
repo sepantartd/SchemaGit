@@ -41,6 +41,7 @@ func PipelineDetailHandler(w http.ResponseWriter, req *http.Request) {
     json.NewEncoder(w).Encode(map[string]interface{}{
         "plan": plan,
         "job":  job,
+        // logs: array of log lines used by the enhanced Job Logs UI
         "logs": logs,
     })
 }
