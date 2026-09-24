@@ -36,7 +36,7 @@ SchemaGit یک سیستم کامل برای **نسخه‌بندی اسکیمای
 ## 📥 نصب CLI
 
 ```bash
-go install github.com/sepanta/schemagit/cli/schemagit@latest
+go install github.com/sepantartd/schemagit/cli/schemagit@latest
 ```
 
 ---
