@@ -58,6 +58,12 @@ func initTables() error {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 		CREATE INDEX IF NOT EXISTS idx_webhooks_org_id ON webhooks(org_id);
+		CREATE TABLE IF NOT EXISTS notifications (
+			org_id TEXT PRIMARY KEY,
+			email BOOLEAN,
+			slack BOOLEAN,
+			slack_webhook TEXT
+		);
 	`)
 	return err
 }

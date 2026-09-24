@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Notifications</title>
+</head>
+<body>
+<h1>Notifications</h1>
+<h2>Settings</h2>
+<label><input type="checkbox" id="email"> Email Notifications</label><br>
+<label><input type="checkbox" id="slack"> Slack Notifications</label><br>
+<input id="slackWebhook" placeholder="Slack Webhook URL">
+<button onclick="save()">Save</button>
+<script>
+function load() {
+    fetch("/api/notifications/get", { headers: { "Authorization": localStorage.getItem("token") } })
+    .then(r => r.json()).then(s => {
+        document.getElementById("email").checked = !!s.email;
+        document.getElementById("slack").checked = !!s.slack;
+        document.getElementById("slackWebhook").value = s.slack_webhook || s.slackWebhook || "";
+    });
+}
+function save() {
+    fetch("/api/notifications/set", {
+        method: "POST",
+        headers: { "Authorization": localStorage.getItem("token"), "Content-Type": "application/json" },
+        body: JSON.stringify({
+            email: document.getElementById("email").checked,
+            slack: document.getElementById("slack").checked,
+            slack_webhook: document.getElementById("slackWebhook").value
+        })
+    }).then(() => alert("Saved"));
+}
+load();
+</script>
+</body>
+</html>
