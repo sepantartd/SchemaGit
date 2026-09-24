@@ -1,4 +1,14 @@
-# SchemaGit
+<div align="center">
+
+## SchemaGit  
+
+![License](https://img.shields.io/badge/License-MIT-blue.svg)
+![Go Version](https://img.shields.io/badge/Go-1.22+-blue)
+![Status](https://img.shields.io/badge/Status-Production--Ready-green)
+![Cloud](https://img.shields.io/badge/Cloud-SchemaGit-orange)
+
+</div>
+
 [English](README.md) | [فارسی](README_FA.md)
 
 SchemaGit یک سیستم کامل برای **نسخه‌بندی اسکیمای دیتابیس**، **Diff**، **Plan**، **Pipeline مهاجرت**، **CLI کامل**، **توکن‌های API**، **وبهوک‌ها**، **نوتیفیکیشن‌ها**، **Audit Logs** و یک **داشبورد Cloud** است.
