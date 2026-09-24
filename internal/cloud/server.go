@@ -81,6 +81,8 @@ func StartAPIServer() {
     http.HandleFunc("/api/tokens/create", api.TokenCreateHandler)
     http.HandleFunc("/api/tokens/list", api.TokenListHandler)
     http.HandleFunc("/api/tokens/delete", api.TokenDeleteHandler)
+    http.HandleFunc("/api/cli/sync", api.CLISyncHandler)
+    http.HandleFunc("/api/cli/sync/project", api.CLISyncProjectHandler)
     http.HandleFunc("/tokens", func(w http.ResponseWriter, r *http.Request) {
         http.ServeFile(w, r, "ui/cloud/tokens.html")
     })

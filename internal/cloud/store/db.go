@@ -46,6 +46,12 @@ func initTables() error {
             token TEXT PRIMARY KEY,
             email TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS project_schema (
+            owner TEXT,
+            project TEXT,
+            schema TEXT
+        );
     `)
 
     return err

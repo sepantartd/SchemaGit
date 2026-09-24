@@ -36,3 +36,47 @@ func RecordMigration(email, project string) error {
     `, uuid.New().String(), email, project)
     return err
 }
+
+func UserProjects(email string) []string {
+    rows, _ := DB.Query(`
+        SELECT name FROM projects WHERE owner = ?
+    `, email)
+
+    var out []string
+    for rows.Next() {
+        var name string
+        rows.Scan(&name)
+        out = append(out, name)
+    }
+    return out
+}
+
+func LoadProjectSchema(email, project string) (string, error) {
+    row := DB.QueryRow(`
+        SELECT schema FROM project_schema
+        WHERE owner = ? AND project = ?
+    `, email, project)
+
+    var schema string
+    err := row.Scan(&schema)
+    return schema, err
+}
+
+func LoadProjectMigrations(email, project string) ([]string, error) {
+    rows, err := DB.Query(`
+        SELECT id FROM migrations
+        WHERE owner = ? AND project = ?
+        ORDER BY created_at ASC
+    `, email, project)
+    if err != nil {
+        return nil, err
+    }
+
+    var out []string
+    for rows.Next() {
+        var id string
+        rows.Scan(&id)
+        out = append(out, id)
+    }
+    return out, nil
+}
