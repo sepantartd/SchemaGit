@@ -1,5 +1,7 @@
-# 📦 SchemaGit — Cloud Database Schema Versioning & Migration Pipeline
+# 📦 SchemaGit
+
 [English](README.md) | [فارسی](README_FA.md)
+
 SchemaGit is a complete system for **database schema versioning**, **diff**, **plan**, **migration pipeline**, **CLI**, **API tokens**, **webhooks**, **notifications**, **audit logs**, and a full **Cloud dashboard**.
 
 Version **1.0** is now complete and production-ready.
