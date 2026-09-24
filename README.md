@@ -1,6 +1,6 @@
 <div align="center">
 
-## 📦 SchemaGit  
+## SchemaGit  
 **Cloud Database Schema Versioning & Migration Pipeline**
 
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
