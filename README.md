@@ -1,4 +1,3 @@
-# 📦 SchemaGit
 <p align="center">
   <h1>📦 SchemaGit</h1>
   <p>Cloud Database Schema Versioning & Migration Pipeline</p>
@@ -11,7 +10,6 @@
     <img src="https://img.shields.io/badge/Cloud-SchemaGit-orange" />
   </p>
 </p>
-
 [English](README.md) | [فارسی](README_FA.md)
 
 SchemaGit is a complete system for **database schema versioning**, **diff**, **plan**, **migration pipeline**, **CLI**, **API tokens**, **webhooks**, **notifications**, **audit logs**, and a full **Cloud dashboard**.
