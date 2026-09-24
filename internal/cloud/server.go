@@ -87,6 +87,9 @@ func StartAPIServer() {
     http.HandleFunc("/api/org/list", api.UserOrgsHandler)
     http.HandleFunc("/api/webhooks/add", api.WebhookAddHandler)
     http.HandleFunc("/api/webhooks/list", api.WebhookListHandler)
+    http.HandleFunc("/api/notifications/set", api.NotificationSetHandler)
+    http.HandleFunc("/api/notifications/get", api.NotificationGetHandler)
+    http.HandleFunc("/api/audit/list", api.AuditListHandler)
     http.HandleFunc("/api/cli/sync", api.CLISyncHandler)
     http.HandleFunc("/api/cli/sync/project", api.CLISyncProjectHandler)
     http.HandleFunc("/tokens", func(w http.ResponseWriter, r *http.Request) {
@@ -97,6 +100,12 @@ func StartAPIServer() {
     })
     http.HandleFunc("/webhooks", func(w http.ResponseWriter, r *http.Request) {
         http.ServeFile(w, r, "ui/cloud/webhooks.html")
+    })
+    http.HandleFunc("/notifications", func(w http.ResponseWriter, r *http.Request) {
+        http.ServeFile(w, r, "ui/cloud/notifications.html")
+    })
+    http.HandleFunc("/audit", func(w http.ResponseWriter, r *http.Request) {
+        http.ServeFile(w, r, "ui/cloud/audit.html")
     })
     http.HandleFunc("/project", func(w http.ResponseWriter, r *http.Request) {
         http.ServeFile(w, r, "ui/cloud/project_overview.html")

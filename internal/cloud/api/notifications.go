@@ -34,10 +34,12 @@ func NotificationSetHandler(w http.ResponseWriter, req *http.Request) {
         http.Error(w, "invalid request", http.StatusBadRequest)
         return
     }
-    if err := store.SetNotification(orgs[0].ID, body.Email, body.Slack, body.SlackWebhook); err != nil {
+    orgID := orgs[0].ID
+    if err := store.SetNotification(orgID, body.Email, body.Slack, body.SlackWebhook); err != nil {
         http.Error(w, "unable to save notification settings", http.StatusInternalServerError)
         return
     }
+    store.AddAudit(orgID, "notification.update", "updated settings")
 
     _ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
@@ -61,11 +63,8 @@ func NotificationGetHandler(w http.ResponseWriter, req *http.Request) {
     }
 
     s, err := store.GetNotification(orgs[0].ID)
-    if err != nil {
-        // No row means notifications are disabled by default.
-        if s == nil {
-            s = &store.NotificationSetting{OrgID: orgs[0].ID}
-        }
+    if err != nil && s == nil {
+        s = &store.NotificationSetting{OrgID: orgs[0].ID}
     }
     _ = json.NewEncoder(w).Encode(s)
 }

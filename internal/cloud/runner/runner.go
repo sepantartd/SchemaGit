@@ -25,6 +25,7 @@ func NewRunner(agentURL string) *Runner {
             payload, _ := json.Marshal(map[string]string{"project": job.ProjectID, "status": string(job.Status), "job": job.ID})
             owner, _ := store.OrgOwner(job.OrgID)
             go store.DispatchNotification(job.OrgID, "migration.completed", string(payload), owner)
+            store.AddAudit(job.OrgID, "migration.completed", string(job.Status))
             go webhook_delivery.Dispatch(job.OrgID, "migration.completed", map[string]interface{}{
                 "project": job.ProjectID,
                 "status":  job.Status,

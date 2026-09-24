@@ -19,6 +19,9 @@ func TokenCreateHandler(w http.ResponseWriter, req *http.Request) {
         http.Error(w, err.Error(), 500)
         return
     }
+    if orgs, err := store.UserOrgs(email); err == nil && len(orgs) > 0 {
+        store.AddAudit(orgs[0].ID, "token.create", newToken)
+    }
 
     json.NewEncoder(w).Encode(map[string]string{
         "token": newToken,

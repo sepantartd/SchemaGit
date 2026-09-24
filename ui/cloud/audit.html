@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audit Logs</title>
+</head>
+<body>
+<h1>Audit Logs</h1>
+<div id="logs"></div>
+<script>
+function load() {
+    fetch("/api/audit/list", {
+        headers: { "Authorization": localStorage.getItem("token") }
+    })
+    .then(r => r.json())
+    .then(data => {
+        let html = "";
+        (data || []).forEach(l => {
+            html += `
+                <div>
+                    <b>${l.event}</b> — ${l.detail}
+                    <br>
+                    <small>${l.created_at}</small>
+                    <hr>
+                </div>
+            `;
+        });
+        document.getElementById("logs").innerHTML = html;
+    });
+}
+load();
+</script>
+</body>
+</html>

@@ -15,6 +15,9 @@ func CLISyncHandler(w http.ResponseWriter, req *http.Request) {
     }
 
     projects := store.UserProjects(email)
+    if orgs, err := store.UserOrgs(email); err == nil && len(orgs) > 0 {
+        store.AddAudit(orgs[0].ID, "cli.sync", email)
+    }
 
     json.NewEncoder(w).Encode(map[string]interface{}{
         "email":    email,

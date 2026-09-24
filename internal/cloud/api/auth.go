@@ -41,6 +41,10 @@ func LoginHandler(w http.ResponseWriter, req *http.Request) {
         return
     }
 
+    if orgs, err := store.UserOrgs(body.Email); err == nil && len(orgs) > 0 {
+        store.AddAudit(orgs[0].ID, "login", body.Email)
+    }
+
     json.NewEncoder(w).Encode(map[string]string{
         "token": token,
     })

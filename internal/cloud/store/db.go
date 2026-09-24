@@ -64,6 +64,13 @@ func initTables() error {
 			slack BOOLEAN,
 			slack_webhook TEXT
 		);
+		CREATE TABLE IF NOT EXISTS audit_logs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			org_id TEXT,
+			event TEXT,
+			detail TEXT,
+			created_at TEXT
+		);
 	`)
 	return err
 }
