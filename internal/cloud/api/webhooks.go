@@ -1,51 +1,73 @@
 package api
 
 import (
-    "encoding/json"
-    "net/http"
-    "fmt"
+	"encoding/json"
+	"net/http"
+	"strings"
+
+	"github.com/sepanta/schemagit/internal/cloud/store"
+	"github.com/sepanta/schemagit/internal/cloud/webhook_delivery"
 )
 
-type GitHubWebhook struct {
-    Action     string `json:"action"`
-    PullRequest struct {
-        Number int    `json:"number"`
-        Title  string `json:"title"`
-        Head   struct {
-            Sha string `json:"sha"`
-        } `json:"head"`
-    } `json:"pull_request"`
-    Repository struct {
-        FullName string `json:"full_name"`
-    } `json:"repository"`
+func WebhookAddHandler(w http.ResponseWriter, req *http.Request) {
+	email, err := authenticatedEmail(req)
+	if err != nil {
+		writeJSONError(w, http.StatusUnauthorized, "invalid token")
+		return
+	}
+	var body struct {
+		OrgID string `json:"org_id"`
+		URL   string `json:"url"`
+	}
+	decoder := json.NewDecoder(req.Body)
+	if err := decoder.Decode(&body); err != nil || body.OrgID == "" || strings.TrimSpace(body.URL) == "" {
+		writeJSONError(w, http.StatusBadRequest, "org_id and url are required")
+		return
+	}
+	if !store.CanManageOrg(email, body.OrgID) {
+		writeJSONError(w, http.StatusForbidden, "forbidden")
+		return
+	}
+	if err := webhook_delivery.ValidateURL(body.URL); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := store.AddWebhook(body.OrgID, strings.TrimSpace(body.URL)); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "unable to add webhook")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-func GitHubWebhookHandler(w http.ResponseWriter, req *http.Request) {
-    var payload GitHubWebhook
-    json.NewDecoder(req.Body).Decode(&payload)
+func WebhookListHandler(w http.ResponseWriter, req *http.Request) {
+	email, err := authenticatedEmail(req)
+	if err != nil {
+		writeJSONError(w, http.StatusUnauthorized, "invalid token")
+		return
+	}
+	orgID := req.URL.Query().Get("org")
+	if orgID == "" || !store.CanAccessOrg(email, orgID) {
+		writeJSONError(w, http.StatusForbidden, "forbidden")
+		return
+	}
+	webhooks, err := store.ListWebhooks(orgID)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "unable to list webhooks")
+		return
+	}
+	writeJSON(w, http.StatusOK, webhooks)
+}
 
-    fmt.Println("Webhook received:", payload.Action)
+func authenticatedEmail(req *http.Request) (string, error) {
+	return store.ValidateToken(req.Header.Get("Authorization"))
+}
 
-    switch payload.Action {
+func writeJSON(w http.ResponseWriter, status int, value interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(value)
+}
 
-    case "opened":
-        fmt.Printf("PR #%d opened: %s\n", payload.PullRequest.Number, payload.PullRequest.Title)
-        // TODO: Trigger diff + plan + store result
-
-    case "synchronize":
-        fmt.Printf("PR #%d updated (new commit: %s)\n",
-            payload.PullRequest.Number,
-            payload.PullRequest.Head.Sha,
-        )
-        // TODO: Trigger diff + plan + update result
-
-    case "closed":
-        fmt.Printf("PR #%d closed\n", payload.PullRequest.Number)
-        // TODO: Cleanup or finalize
-
-    default:
-        fmt.Println("Unhandled webhook action:", payload.Action)
-    }
-
-    w.WriteHeader(http.StatusOK)
+func writeJSONError(w http.ResponseWriter, status int, message string) {
+	writeJSON(w, status, map[string]string{"error": message})
 }
