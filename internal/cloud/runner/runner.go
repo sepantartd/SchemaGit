@@ -1,6 +1,9 @@
 package runner
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+	"github.com/sepanta/schemagit/internal/cloud/webhook_delivery"
+)
 
 type Runner struct {
 	Queue          *Queue
@@ -9,7 +12,20 @@ type Runner struct {
 }
 
 func NewRunner(agentURL string) *Runner {
-	return &Runner{Queue: NewQueue(), Executor: NewExecutor(agentURL)}
+	return &Runner{
+		Queue:    NewQueue(),
+		Executor: NewExecutor(agentURL),
+		CompletionHook: func(job *Job) {
+			if job.OrgID == "" {
+				return
+			}
+			go webhook_delivery.Dispatch(job.OrgID, "migration.completed", map[string]interface{}{
+				"project": job.ProjectID,
+				"status":  job.Status,
+				"job":     job.ID,
+			})
+		},
+	}
 }
 
 func (r *Runner) RunMigration(projectID string, plan []string) (*Job, error) {

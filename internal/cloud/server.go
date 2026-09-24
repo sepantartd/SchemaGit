@@ -81,10 +81,22 @@ func StartAPIServer() {
     http.HandleFunc("/api/tokens/create", api.TokenCreateHandler)
     http.HandleFunc("/api/tokens/list", api.TokenListHandler)
     http.HandleFunc("/api/tokens/delete", api.TokenDeleteHandler)
+    http.HandleFunc("/api/org/create", api.OrgCreateHandler)
+    http.HandleFunc("/api/org/add_member", api.OrgAddMemberHandler)
+    http.HandleFunc("/api/org/members", api.OrgMembersHandler)
+    http.HandleFunc("/api/org/list", api.UserOrgsHandler)
+    http.HandleFunc("/api/webhooks/add", api.WebhookAddHandler)
+    http.HandleFunc("/api/webhooks/list", api.WebhookListHandler)
     http.HandleFunc("/api/cli/sync", api.CLISyncHandler)
     http.HandleFunc("/api/cli/sync/project", api.CLISyncProjectHandler)
     http.HandleFunc("/tokens", func(w http.ResponseWriter, r *http.Request) {
         http.ServeFile(w, r, "ui/cloud/tokens.html")
+    })
+    http.HandleFunc("/org", func(w http.ResponseWriter, r *http.Request) {
+        http.ServeFile(w, r, "ui/cloud/org.html")
+    })
+    http.HandleFunc("/webhooks", func(w http.ResponseWriter, r *http.Request) {
+        http.ServeFile(w, r, "ui/cloud/webhooks.html")
     })
     http.HandleFunc("/project", func(w http.ResponseWriter, r *http.Request) {
         http.ServeFile(w, r, "ui/cloud/project_overview.html")

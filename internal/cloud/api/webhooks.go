@@ -10,6 +10,10 @@ import (
 )
 
 func WebhookAddHandler(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
 	email, err := authenticatedEmail(req)
 	if err != nil {
 		writeJSONError(w, http.StatusUnauthorized, "invalid token")
@@ -20,7 +24,11 @@ func WebhookAddHandler(w http.ResponseWriter, req *http.Request) {
 		URL   string `json:"url"`
 	}
 	decoder := json.NewDecoder(req.Body)
-	if err := decoder.Decode(&body); err != nil || body.OrgID == "" || strings.TrimSpace(body.URL) == "" {
+	if err := decoder.Decode(&body); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid JSON request")
+		return
+	}
+	if body.OrgID == "" || strings.TrimSpace(body.URL) == "" {
 		writeJSONError(w, http.StatusBadRequest, "org_id and url are required")
 		return
 	}
@@ -28,11 +36,12 @@ func WebhookAddHandler(w http.ResponseWriter, req *http.Request) {
 		writeJSONError(w, http.StatusForbidden, "forbidden")
 		return
 	}
+	body.URL = strings.TrimSpace(body.URL)
 	if err := webhook_delivery.ValidateURL(body.URL); err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := store.AddWebhook(body.OrgID, strings.TrimSpace(body.URL)); err != nil {
+	if err := store.AddWebhook(body.OrgID, body.URL); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "unable to add webhook")
 		return
 	}
@@ -40,6 +49,10 @@ func WebhookAddHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func WebhookListHandler(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodGet {
+		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
 	email, err := authenticatedEmail(req)
 	if err != nil {
 		writeJSONError(w, http.StatusUnauthorized, "invalid token")

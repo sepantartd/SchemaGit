@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -60,7 +61,7 @@ func deliver(rawURL string, body []byte) error {
 		return err
 	}
 	defer res.Body.Close()
-	_, _ = res.Body.Read(make([]byte, maxResponseBody))
+	_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, maxResponseBody))
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return fmt.Errorf("webhook returned %s", res.Status)
 	}
