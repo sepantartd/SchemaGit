@@ -1,54 +1,34 @@
 package cmd
 
 import (
-    "bytes"
-    "encoding/json"
-    "fmt"
-    "net/http"
-    "os"
+	"fmt"
+	"net/http"
+	"os"
 
-    "github.com/spf13/cobra"
+	"github.com/spf13/cobra"
 )
 
 var pushCmd = &cobra.Command{
-    Use:   "push",
-    Short: "Push local schema to Cloud",
-    Run: func(cmd *cobra.Command, args []string) {
-        if len(args) < 2 {
-            fmt.Println("Usage: schemagit push <project> <schema-file>")
-            return
-        }
-
-        project := args[0]
-        file := args[1]
-
-        schema, err := os.ReadFile(file)
-        if err != nil {
-            fmt.Println("Error reading schema:", err)
-            return
-        }
-
-        token := os.Getenv("SCHEMAGIT_TOKEN")
-
-        body := map[string]string{
-            "project": project,
-            "schema":  string(schema),
-        }
-        buf, _ := json.Marshal(body)
-
-        req, _ := http.NewRequest("POST", cloudURL+"/api/cli/push", bytes.NewBuffer(buf))
-        req.Header.Set("X-API-Token", token)
-
-        res, err := http.DefaultClient.Do(req)
-        if err != nil {
-            fmt.Println("Error:", err)
-            return
-        }
-
-        fmt.Println("Schema pushed successfully")
-    },
+	Use:   "push <project> <schema-file>",
+	Short: "Push local schema to Cloud",
+	Args:  cobra.ExactArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		schema, err := os.ReadFile(args[1])
+		if err != nil {
+			return fmt.Errorf("read schema file: %w", err)
+		}
+		_, err = cliRequest(cmd, http.MethodPost, "/api/cli/push", args[0], map[string]string{
+			"project": args[0],
+			"schema":  string(schema),
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println("Schema pushed successfully")
+		return nil
+	},
 }
 
 func init() {
-    rootCmd.AddCommand(pushCmd)
+	rootCmd.AddCommand(pushCmd)
 }

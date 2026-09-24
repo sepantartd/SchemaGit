@@ -1,47 +1,31 @@
 package cmd
 
 import (
-    "bytes"
-    "encoding/json"
-    "fmt"
-    "net/http"
-    "os"
+	"fmt"
+	"net/http"
 
-    "github.com/spf13/cobra"
+	"github.com/spf13/cobra"
 )
 
 var migrateCmd = &cobra.Command{
-    Use:   "migrate",
-    Short: "Execute migration via Cloud pipeline",
-    Run: func(cmd *cobra.Command, args []string) {
-        if len(args) == 0 {
-            fmt.Println("Project name required")
-            return
-        }
-
-        project := args[0]
-        token := os.Getenv("SCHEMAGIT_TOKEN")
-
-        body := map[string]string{"project": project}
-        buf, _ := json.Marshal(body)
-
-        req, _ := http.NewRequest("POST", cloudURL+"/api/cli/migrate", bytes.NewBuffer(buf))
-        req.Header.Set("X-API-Token", token)
-
-        res, err := http.DefaultClient.Do(req)
-        if err != nil {
-            fmt.Println("Error:", err)
-            return
-        }
-
-        var data map[string]interface{}
-        json.NewDecoder(res.Body).Decode(&data)
-
-        fmt.Println("Migration Job:")
-        fmt.Println(data["job"])
-    },
+	Use:   "migrate <project>",
+	Short: "Execute migration via Cloud pipeline",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		body, err := cliRequest(cmd, http.MethodPost, "/api/cli/migrate", args[0], map[string]string{"project": args[0]})
+		if err != nil {
+			return err
+		}
+		value, err := responseField(body, "job")
+		if err != nil {
+			return err
+		}
+		fmt.Println("Migration Job:")
+		fmt.Println(value)
+		return nil
+	},
 }
 
 func init() {
-    rootCmd.AddCommand(migrateCmd)
+	rootCmd.AddCommand(migrateCmd)
 }
