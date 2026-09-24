@@ -1,4 +1,4 @@
-module github.com/sepanta/schemagit
+module github.com/sepantartd/schemagit
 
 go 1.22
 
