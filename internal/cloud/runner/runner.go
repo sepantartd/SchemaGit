@@ -2,6 +2,7 @@ package runner
 
 import (
     "encoding/json"
+    "log"
 
     "github.com/google/uuid"
     "github.com/sepanta/schemagit/internal/cloud/store"
@@ -41,6 +42,10 @@ func (r *Runner) RunMigration(projectID string, plan []string) (*Job, error) {
 
 func (r *Runner) RunMigrationForOrg(projectID, orgID string, plan []string) (*Job, error) {
     job := Job{ID: uuid.New().String(), ProjectID: projectID, OrgID: orgID, Plan: plan, Status: Pending}
+    log.Printf("pipeline start job=%s project=%s org=%s", job.ID, job.ProjectID, job.OrgID)
+    defer func() {
+        log.Printf("pipeline end job=%s status=%s", job.ID, job.Status)
+    }()
     r.Queue.Add(job)
     next := r.Queue.Next()
     if next == nil {

@@ -3,6 +3,7 @@ package cloud
 import (
     "encoding/json"
     "errors"
+    "log"
     "net/http"
     "strconv"
     "strings"
@@ -137,8 +138,15 @@ func StartAPIServer() {
 
     go StartDashboardServer(cfg.CloudAPIKey)
 
+    handler := http.DefaultServeMux
+    handler = LoggingMiddleware(handler)
+    handler = SecurityHeadersMiddleware(handler)
+    handler = CORSMiddleware(handler)
+    handler = RecoveryMiddleware(handler)
+    handler = RateLimitMiddleware(100, time.Minute)(handler)
+
     log.Info("Cloud API running on :9090")
-    http.ListenAndServe(":9090", nil)
+    http.ListenAndServe(":9090", handler)
 }
 
 func withAuth(next http.HandlerFunc) http.HandlerFunc {

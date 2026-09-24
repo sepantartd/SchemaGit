@@ -2,6 +2,7 @@ package api
 
 import (
     "encoding/json"
+    "log"
     "net/http"
     "schemagit/internal/cloud/store"
 )
@@ -20,6 +21,7 @@ func TokenCreateHandler(w http.ResponseWriter, req *http.Request) {
         return
     }
     if orgs, err := store.UserOrgs(email); err == nil && len(orgs) > 0 {
+        log.Printf("token created org=%s email=%s", orgs[0].ID, email)
         store.AddAudit(orgs[0].ID, "token.create", newToken)
     }
 

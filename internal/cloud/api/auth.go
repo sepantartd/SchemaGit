@@ -2,6 +2,7 @@ package api
 
 import (
     "encoding/json"
+    "log"
     "net/http"
     "schemagit/internal/cloud/store"
 )
@@ -42,6 +43,7 @@ func LoginHandler(w http.ResponseWriter, req *http.Request) {
     }
 
     if orgs, err := store.UserOrgs(body.Email); err == nil && len(orgs) > 0 {
+        log.Printf("login success email=%s org=%s", body.Email, orgs[0].ID)
         store.AddAudit(orgs[0].ID, "login", body.Email)
     }
 
