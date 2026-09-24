@@ -185,4 +185,4 @@ go build -o schemagit-cloud
 
 ## 📄 License
 
-MIT
+[View License](./LICENSE)
