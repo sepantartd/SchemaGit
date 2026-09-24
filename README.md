@@ -37,7 +37,7 @@ Version **1.0** is now complete and production-ready.
 ## 📥 Install CLI
 
 ```bash
-go install github.com/sepanta/schemagit/cli/schemagit@latest
+go install github.com/sepantartd/schemagit/cli/schemagit@latest
 ```
 
 ---
