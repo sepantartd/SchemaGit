@@ -1,15 +1,14 @@
-<p align="center">
-  <h1>📦 SchemaGit</h1>
-  <p>Cloud Database Schema Versioning & Migration Pipeline</p>
+<div align="center">
 
-  <!-- Badges -->
-  <p>
-    <img src="https://img.shields.io/badge/License-MIT-blue.svg" />
-    <img src="https://img.shields.io/badge/Go-1.22+-blue" />
-    <img src="https://img.shields.io/badge/Status-Production--Ready-green" />
-    <img src="https://img.shields.io/badge/Cloud-SchemaGit-orange" />
-  </p>
-</p>
+## 📦 SchemaGit  
+**Cloud Database Schema Versioning & Migration Pipeline**
+
+![License](https://img.shields.io/badge/License-MIT-blue.svg)
+![Go Version](https://img.shields.io/badge/Go-1.22+-blue)
+![Status](https://img.shields.io/badge/Status-Production--Ready-green)
+![Cloud](https://img.shields.io/badge/Cloud-SchemaGit-orange)
+
+</div>
 
 [English](README.md) | [فارسی](README_FA.md)
 
